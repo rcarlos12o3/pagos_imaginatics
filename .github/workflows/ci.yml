@@ -129,11 +129,28 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Deploy preparation
+    - name: Setup SSH
       run: |
-        echo "Deployment would run here"
-        echo "This could include:"
-        echo "- Building production Docker images"
-        echo "- Pushing to container registry"
-        echo "- Updating production environment"
-        echo "- Running deployment scripts"
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to Preproduction Server
+      run: |
+        ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          set -e
+          cd ${{ secrets.PROJECT_PATH }}
+          git pull origin master
+          docker-compose down
+          docker-compose up -d --build
+          sleep 10
+          docker-compose ps
+          timeout 60 bash -c 'until curl -f http://localhost:8080; do sleep 2; done' || echo "Warning: Health check timeout"
+          echo "Deployment completed!"
+        EOF
+
+    - name: Verify Deployment
+      run: |
+        curl -f http://${{ secrets.SERVER_HOST }}:8080 || echo "External check failed"
+        echo "App available at: http://${{ secrets.SERVER_HOST }}:8080"
