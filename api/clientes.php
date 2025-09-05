@@ -734,29 +734,39 @@ function registrarPago($database, $input) {
             [$clienteId, $montoPagado, $fechaPago, $metodoPago, $numeroOperacion, $banco, $observaciones]
         );
 
-        // Calcular nueva fecha de vencimiento basada en la fecha actual de vencimiento
-        // Se mantiene el día pero se avanza al siguiente periodo
-        $fechaVencimientoActual = new DateTime($cliente['fecha_vencimiento']);
-        $tipoServicio = $cliente['tipo_servicio'] ?? 'anual';
-        
-        // Añadir el periodo correspondiente a la fecha de vencimiento actual
-        switch ($tipoServicio) {
-            case 'mensual':
-                $fechaVencimientoActual->add(new DateInterval('P1M'));
-                break;
-            case 'trimestral':
-                $fechaVencimientoActual->add(new DateInterval('P3M'));
-                break;
-            case 'semestral':
-                $fechaVencimientoActual->add(new DateInterval('P6M'));
-                break;
-            case 'anual':
-            default:
-                $fechaVencimientoActual->add(new DateInterval('P1Y'));
-                break;
+        // Usar fecha personalizada si se proporciona, sino calcular automáticamente
+        if (!empty($input['nueva_fecha_vencimiento'])) {
+            // Validar formato de fecha personalizada
+            $fechaPersonalizada = DateTime::createFromFormat('Y-m-d', $input['nueva_fecha_vencimiento']);
+            if (!$fechaPersonalizada) {
+                throw new Exception('Formato de fecha de vencimiento inválido');
+            }
+            $nuevaFechaVencimiento = $input['nueva_fecha_vencimiento'];
+        } else {
+            // Calcular nueva fecha de vencimiento basada en la fecha actual de vencimiento
+            // Se mantiene el día pero se avanza al siguiente periodo
+            $fechaVencimientoActual = new DateTime($cliente['fecha_vencimiento']);
+            $tipoServicio = $cliente['tipo_servicio'] ?? 'anual';
+            
+            // Añadir el periodo correspondiente a la fecha de vencimiento actual
+            switch ($tipoServicio) {
+                case 'mensual':
+                    $fechaVencimientoActual->add(new DateInterval('P1M'));
+                    break;
+                case 'trimestral':
+                    $fechaVencimientoActual->add(new DateInterval('P3M'));
+                    break;
+                case 'semestral':
+                    $fechaVencimientoActual->add(new DateInterval('P6M'));
+                    break;
+                case 'anual':
+                default:
+                    $fechaVencimientoActual->add(new DateInterval('P1Y'));
+                    break;
+            }
+            
+            $nuevaFechaVencimiento = $fechaVencimientoActual->format('Y-m-d');
         }
-        
-        $nuevaFechaVencimiento = $fechaVencimientoActual->format('Y-m-d');
         
         // Actualizar la fecha de vencimiento del cliente
         $database->query(

@@ -596,7 +596,7 @@ function registrarPago(clienteId) {
 
                     <div class="form-group">
                         <label for="fechaPago">Fecha de Pago: <span style="color: red;">*</span></label>
-                        <input type="date" id="fechaPago" value="${new Date().toISOString().split('T')[0]}" required>
+                        <input type="date" id="fechaPago" value="${formatearFechaISO()}" required>
                     </div>
 
                     <div class="form-group">
@@ -634,7 +634,19 @@ function registrarPago(clienteId) {
                     </div>
 
                     <div class="nueva-fecha-info">
-                        <p><strong>Nueva fecha de vencimiento:</strong> <span id="nuevaFechaVencimiento">Calculando...</span></p>
+                        <div class="form-group">
+                            <label>
+                                <input type="radio" name="fechaOption" value="automatica" checked> 
+                                Calcular automáticamente: <span id="nuevaFechaVencimiento">Calculando...</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="radio" name="fechaOption" value="manual"> 
+                                Ingresar fecha manualmente:
+                            </label>
+                            <input type="date" id="fechaVencimientoManual" style="margin-left: 20px; display: none;">
+                        </div>
                     </div>
 
                     <div class="form-actions">
@@ -652,8 +664,23 @@ function registrarPago(clienteId) {
     const nuevaFechaSpan = document.getElementById('nuevaFechaVencimiento');
     
     function calcularNuevaFecha() {
+        // Validar que la fecha de vencimiento existe y es válida
+        if (!cliente.fecha) {
+            nuevaFechaSpan.textContent = 'Fecha de vencimiento no disponible';
+            nuevaFechaSpan.style.color = 'red';
+            return;
+        }
+
         // Usar la fecha de vencimiento actual del cliente
-        const fechaVencimientoActual = new Date(cliente.fecha_vencimiento + 'T00:00:00');
+        const fechaVencimientoActual = new Date(cliente.fecha + 'T00:00:00');
+        
+        // Validar que la fecha creada es válida
+        if (isNaN(fechaVencimientoActual.getTime())) {
+            nuevaFechaSpan.textContent = 'Fecha de vencimiento inválida';
+            nuevaFechaSpan.style.color = 'red';
+            return;
+        }
+
         const diaOriginal = fechaVencimientoActual.getDate();
         const tipoServicio = cliente.tipo_servicio || 'anual';
         
@@ -697,10 +724,60 @@ function registrarPago(clienteId) {
     
     calcularNuevaFecha(); // Mostrar la nueva fecha calculada
 
+    // Manejar cambio entre fecha automática y manual
+    const radioButtons = document.querySelectorAll('input[name="fechaOption"]');
+    const fechaManualInput = document.getElementById('fechaVencimientoManual');
+    
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'manual') {
+                fechaManualInput.style.display = 'inline-block';
+                fechaManualInput.required = true;
+            } else {
+                fechaManualInput.style.display = 'none';
+                fechaManualInput.required = false;
+                fechaManualInput.value = '';
+            }
+        });
+    });
+
     // Manejar envío del formulario
     document.getElementById('formRegistrarPago').addEventListener('submit', async function(e) {
         e.preventDefault();
         
+        // Determinar la nueva fecha de vencimiento
+        let nuevaFechaVencimiento = null;
+        const fechaOption = document.querySelector('input[name="fechaOption"]:checked').value;
+        
+        if (fechaOption === 'manual') {
+            const fechaManual = document.getElementById('fechaVencimientoManual').value;
+            if (!fechaManual) {
+                alert('Por favor, ingrese la nueva fecha de vencimiento manual.');
+                return;
+            }
+            nuevaFechaVencimiento = fechaManual;
+        } else {
+            // Recalcular la fecha automática para enviar al servidor
+            if (cliente.fecha) {
+                const fechaVencimientoActual = new Date(cliente.fecha + 'T00:00:00');
+                if (!isNaN(fechaVencimientoActual.getTime())) {
+                    const tipoServicio = cliente.tipo_servicio || 'anual';
+                    const mesesAAgregar = tipoServicio === 'mensual' ? 1 : 
+                                         tipoServicio === 'trimestral' ? 3 : 
+                                         tipoServicio === 'semestral' ? 6 : 12;
+                    
+                    const nuevaFecha = new Date(fechaVencimientoActual);
+                    nuevaFecha.setMonth(nuevaFecha.getMonth() + mesesAAgregar);
+                    nuevaFechaVencimiento = nuevaFecha.toISOString().split('T')[0];
+                }
+            }
+            
+            if (!nuevaFechaVencimiento) {
+                alert('No se pudo calcular la nueva fecha de vencimiento. Use la opción manual.');
+                return;
+            }
+        }
+
         const formData = {
             cliente_id: clienteId,
             monto_pagado: document.getElementById('montoPagado').value,
@@ -708,7 +785,8 @@ function registrarPago(clienteId) {
             metodo_pago: document.getElementById('metodoPago').value,
             numero_operacion: document.getElementById('numeroOperacion').value || null,
             banco: document.getElementById('banco').value || null,
-            observaciones: document.getElementById('observaciones').value || null
+            observaciones: document.getElementById('observaciones').value || null,
+            nueva_fecha_vencimiento: nuevaFechaVencimiento
         };
 
         try {
@@ -987,7 +1065,7 @@ function generarMensajeOrdenPago(cliente) {
 
 // Función auxiliar para calcular días restantes
 function calcularDiasRestantes(fechaVencimiento) {
-    const hoy = new Date();
+    const hoy = obtenerFechaPeru();
     const fecha = new Date(fechaVencimiento);
     
     hoy.setHours(0, 0, 0, 0);

@@ -3,6 +3,34 @@
 // Sistema RUC Consultor - Imaginatics Peru SAC
 // ============================================
 
+// Funciones de manejo de fecha/hora en zona peruana
+function obtenerFechaPeru() {
+    // Obtener fecha actual en zona peruana (UTC-5)
+    const ahora = new Date();
+    const utcTime = ahora.getTime() + (ahora.getTimezoneOffset() * 60000);
+    const peruTime = new Date(utcTime + (3600000 * -5)); // UTC-5
+    return peruTime;
+}
+
+function formatearFechaISO(fecha) {
+    // Formatear fecha para inputs HTML5 (YYYY-MM-DD)
+    if (!fecha) fecha = obtenerFechaPeru();
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function obtenerFechaHoraPeru() {
+    // Obtener fecha y hora actual en formato YYYY-MM-DD HH:MM:SS
+    const fecha = obtenerFechaPeru();
+    const fechaStr = formatearFechaISO(fecha);
+    const hora = String(fecha.getHours()).padStart(2, '0');
+    const minutos = String(fecha.getMinutes()).padStart(2, '0');
+    const segundos = String(fecha.getSeconds()).padStart(2, '0');
+    return `${fechaStr} ${hora}:${minutos}:${segundos}`;
+}
+
 // Variables globales
 let clientes = [];
 let clienteSeleccionado = -1;

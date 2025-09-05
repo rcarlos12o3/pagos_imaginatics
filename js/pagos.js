@@ -23,10 +23,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('formPago').addEventListener('submit', guardarPago);
     
     // Establecer fecha actual por defecto
-    document.getElementById('fechaPago').value = new Date().toISOString().split('T')[0];
+    document.getElementById('fechaPago').value = formatearFechaISO();
     
     // Establecer mes y año actuales en filtros
-    const fechaActual = new Date();
+    const fechaActual = obtenerFechaPeru();
     document.getElementById('filtroMes').value = fechaActual.getMonth() + 1;
     document.getElementById('filtroAnio').value = fechaActual.getFullYear();
     
@@ -293,7 +293,7 @@ function mostrarModalNuevoPago() {
     document.getElementById('modalTitulo').textContent = 'Nuevo Pago';
     document.getElementById('formPago').reset();
     document.getElementById('pagoId').value = '';
-    document.getElementById('fechaPago').value = new Date().toISOString().split('T')[0];
+    document.getElementById('fechaPago').value = formatearFechaISO();
     document.getElementById('actualizarVencimiento').checked = true;
     document.getElementById('modalPago').classList.add('active');
 }
@@ -538,7 +538,7 @@ async function exportarPagos() {
         const url = URL.createObjectURL(blob);
         
         link.setAttribute('href', url);
-        link.setAttribute('download', `pagos_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute('download', `pagos_${formatearFechaISO()}.csv`);
         link.style.visibility = 'hidden';
         
         document.body.appendChild(link);

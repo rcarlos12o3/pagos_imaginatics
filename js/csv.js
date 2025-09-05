@@ -245,7 +245,7 @@ function parsearFechaCSV(fechaStr) {
             // Validar fecha
             const fecha = new Date(año, mes - 1, dia);
             if (fecha.getFullYear() === año && fecha.getMonth() === mes - 1 && fecha.getDate() === dia) {
-                return fecha.toISOString().split('T')[0]; // Formato yyyy-mm-dd
+                return formatearFechaISO(fecha); // Formato yyyy-mm-dd
             }
         }
     }

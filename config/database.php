@@ -4,6 +4,9 @@
  * Imaginatics Perú SAC - Sistema RUC Consultor
  */
 
+// Incluir configuraciones globales
+require_once __DIR__ . '/init.php';
+
 // Configuración de la base de datos
 define('DB_HOST', 'mysql');
 define('DB_NAME', 'imaginatics_ruc');
@@ -53,6 +56,9 @@ class Database {
             ];
 
             $this->pdo = new PDO($dsn, $this->username, $this->password, $options);
+            
+            // Configurar zona horaria de MySQL a Lima, Perú
+            $this->pdo->exec("SET time_zone = '-05:00'"); // UTC-5 para Perú
 
         } catch(PDOException $e) {
             if (DEBUG_MODE) {
@@ -280,10 +286,4 @@ set_exception_handler(function($exception) {
         ], 500);
     }
 });
-
-// Configurar zona horaria
-date_default_timezone_set('America/Lima');
-
-// Configurar charset para respuestas
-ini_set('default_charset', 'UTF-8');
 ?>

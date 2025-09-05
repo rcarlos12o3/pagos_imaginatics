@@ -31,9 +31,9 @@ function inicializarSistema() {
 function configurarFechaDefecto() {
     const fechaInput = document.getElementById('fechaVencimiento');
     if (fechaInput) {
-        const hoy = new Date();
+        const hoy = obtenerFechaPeru();
         hoy.setDate(hoy.getDate() + CONFIG.FECHA_DIAS_DEFECTO);
-        fechaInput.value = hoy.toISOString().split('T')[0];
+        fechaInput.value = formatearFechaISO(hoy);
     }
 
     // Configurar días de anticipación por defecto
@@ -46,7 +46,7 @@ function configurarFechaDefecto() {
 function mostrarFechaActual() {
     const fechaElemento = document.getElementById('fecha-actual');
     if (fechaElemento) {
-        const hoy = new Date();
+        const hoy = obtenerFechaPeru();
         fechaElemento.textContent = hoy.toLocaleDateString('es-PE', {
             weekday: 'long',
             year: 'numeric',
@@ -524,7 +524,7 @@ function mostrarCanvasEnVista(canvas) {
 // ============================================
 
 function mostrarResultadosVencimientos(resultado) {
-    const hoy = new Date().toLocaleDateString('es-PE');
+    const hoy = obtenerFechaPeru().toLocaleDateString('es-PE');
     let textoResultado = 'Resumen de Vencimientos (al ' + hoy + '):\n\n';
 
     if (resultado.vencidos.length > 0) {
@@ -569,7 +569,7 @@ function mostrarResultadosVencimientos(resultado) {
 // ============================================
 
 function obtenerEstadoPago(fechaVencimiento) {
-    const hoy = new Date();
+    const hoy = obtenerFechaPeru();
     const fecha = new Date(fechaVencimiento);
     
     // Ajustar fecha para evitar problemas de zona horaria
