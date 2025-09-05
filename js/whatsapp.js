@@ -131,6 +131,7 @@ async function procesarRecordatoriosConImagenes(clientes) {
                 body: JSON.stringify({
                     action: 'generar_imagen_recordatorio',
                     cliente_id: cliente.id,
+                    numero_destino: cliente.whatsapp,  // Agregar número de destino
                     dias_restantes: diasRestantes,  // ← CORREGIDO: usar la variable
                     imagen_base64: imagenBase64
                 })

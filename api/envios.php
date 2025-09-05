@@ -233,9 +233,10 @@ function enviarImagenWhatsApp($database, $input) {
 
         // Registrar en BD
         $database->insert(
-            "INSERT INTO envios_whatsapp (cliente_id, tipo_envio, estado, respuesta_api, mensaje_error, imagen_generada) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO envios_whatsapp (cliente_id, numero_destino, tipo_envio, estado, respuesta_api, mensaje_error, imagen_generada) VALUES (?, ?, ?, ?, ?, ?, ?)",
             [
                 $input['cliente_id'],
+                $numero,
                 'orden_pago',
                 $resultado['success'] ? 'enviado' : 'error',
                 json_encode($resultado['response']),
@@ -288,9 +289,10 @@ function enviarTextoWhatsApp($database, $input) {
 
         // Registrar en BD
         $database->insert(
-            "INSERT INTO envios_whatsapp (cliente_id, tipo_envio, estado, respuesta_api, mensaje_error, mensaje_texto) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO envios_whatsapp (cliente_id, numero_destino, tipo_envio, estado, respuesta_api, mensaje_error, mensaje_texto) VALUES (?, ?, ?, ?, ?, ?, ?)",
             [
                 $input['cliente_id'],
+                $numero,
                 'orden_pago',
                 $resultado['success'] ? 'enviado' : 'error',
                 json_encode($resultado['response']),
@@ -396,9 +398,10 @@ function enviarLote($database, $input) {
 
             // Registrar envío en BD
             $envioId = $database->insert(
-                "INSERT INTO envios_whatsapp (cliente_id, tipo_envio, mensaje_texto, estado, respuesta_api, mensaje_error, imagen_generada) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO envios_whatsapp (cliente_id, numero_destino, tipo_envio, mensaje_texto, estado, respuesta_api, mensaje_error, imagen_generada) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     $cliente['id'],
+                    formatearNumero($cliente['whatsapp']),
                     'orden_pago',
                     $mensaje,
                     $resultadoEnvio['success'] ? 'enviado' : 'error',
@@ -647,9 +650,10 @@ function enviarIndividual($database, $input) {
         $resultadoEnvio = enviarWhatsAppSimple($cliente['whatsapp'], $mensaje, $database);
 
         $envioId = $database->insert(
-            "INSERT INTO envios_whatsapp (cliente_id, tipo_envio, mensaje_texto, estado, respuesta_api, mensaje_error, imagen_generada) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO envios_whatsapp (cliente_id, numero_destino, tipo_envio, mensaje_texto, estado, respuesta_api, mensaje_error, imagen_generada) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 $cliente['id'],
+                formatearNumero($cliente['whatsapp']),
                 $input['tipo_envio'],
                 $mensaje,
                 $resultadoEnvio['success'] ? 'enviado' : 'error',
@@ -949,9 +953,10 @@ function generarImagenRecordatorioEndpoint($database, $input) {
         $tipoEnvio = $input['dias_restantes'] < 0 ? 'recordatorio_vencido' : 'recordatorio_proximo';
 
         $database->insert(
-            "INSERT INTO envios_whatsapp (cliente_id, tipo_envio, estado, respuesta_api, mensaje_error, imagen_generada) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO envios_whatsapp (cliente_id, numero_destino, tipo_envio, estado, respuesta_api, mensaje_error, imagen_generada) VALUES (?, ?, ?, ?, ?, ?, ?)",
             [
                 $input['cliente_id'],
+                $numero,  // Agregar el número de destino
                 $tipoEnvio,
                 $resultado['success'] ? 'enviado' : 'error',
                 json_encode($resultado['response']),
