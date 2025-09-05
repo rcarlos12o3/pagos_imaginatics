@@ -1,0 +1,29 @@
+version: '3.8'
+services:
+  web:
+    image: webdevops/php-apache:8.1  # Imagen con extensiones incluidas
+    container_name: imaginatics-web
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/app
+    depends_on:
+      - mysql
+    environment:
+      - WEB_DOCUMENT_ROOT=/app
+
+  mysql:
+    image: mysql:8.0
+    container_name: imaginatics-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: imaginatics123
+      MYSQL_DATABASE: imaginatics_ruc
+      MYSQL_USER: imaginatics
+      MYSQL_PASSWORD: imaginatics123
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:

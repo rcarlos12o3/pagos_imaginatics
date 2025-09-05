@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso al Sistema - Imaginatics Perú</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+            overflow: hidden;
+        }
+
+        .login-header {
+            background: linear-gradient(45deg, #2581c4, #1a6399);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .login-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 80px;
+            height: 80px;
+            background: #f39325;
+            opacity: 0.1;
+            border-radius: 50%;
+            transform: translate(30px, -30px);
+        }
+
+        .login-header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .login-header p {
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 15px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .login-body {
+            padding: 40px 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: #f8f9fa;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #2581c4;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(37, 129, 196, 0.1);
+        }
+
+        .celular-input {
+            position: relative;
+        }
+
+        .celular-prefix {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+            font-weight: 600;
+            pointer-events: none;
+        }
+
+        .celular-input input {
+            padding-left: 60px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #2581c4, #1a6399);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(37, 129, 196, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #2581c4;
+            border: 2px solid #2581c4;
+        }
+
+        .btn-secondary:hover {
+            background: #2581c4;
+            color: white;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .forgot-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .forgot-link a {
+            color: #2581c4;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .forgot-link a:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2581c4;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .primera-vez {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .primera-vez h3 {
+            margin-bottom: 10px;
+            color: #856404;
+        }
+
+        .version-info {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="logo">📱</div>
+            <h1>Sistema de Gestión</h1>
+            <p>Imaginatics Perú SAC</p>
+        </div>
+        
+        <div class="login-body">
+            <!-- Alertas -->
+            <div id="alertContainer"></div>
+
+            <!-- Información para primera vez -->
+            <div class="primera-vez" id="primeraVezInfo">
+                <h3>🔐 Primera vez en el sistema</h3>
+                <p>Tu contraseña temporal ha sido enviada por WhatsApp. Podrás cambiarla después del primer acceso.</p>
+            </div>
+
+            <!-- Formulario de Login -->
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="celular">Número de Celular</label>
+                    <div class="celular-input">
+                        <span class="celular-prefix">+51</span>
+                        <input type="tel" id="celular" name="celular" 
+                               placeholder="999888777" 
+                               pattern="[0-9]{9}" 
+                               maxlength="9" 
+                               required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" 
+                           placeholder="Ingresa tu contraseña" 
+                           required>
+                </div>
+
+                <button type="submit" class="btn" id="loginBtn">
+                    🔓 Iniciar Sesión
+                </button>
+            </form>
+
+            <div class="forgot-link">
+                <a href="#" onclick="mostrarRecuperacion()">¿Olvidaste tu contraseña?</a>
+            </div>
+
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p id="loadingText">Iniciando sesión...</p>
+            </div>
+
+            <div class="version-info">
+                v1.0 - Sistema de Gestión RUC
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Recuperación -->
+    <div style="display: none;" id="recuperacionModal">
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 30px; border-radius: 15px; max-width: 400px; width: 90%;">
+                <h3 style="margin-bottom: 20px; color: #333;">🔑 Recuperar Contraseña</h3>
+                <p style="margin-bottom: 20px; color: #666; font-size: 14px;">
+                    Ingresa tu número de celular y te enviaremos una nueva contraseña por WhatsApp.
+                </p>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Número de Celular</label>
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #666; font-weight: 600;">+51</span>
+                        <input type="tel" id="celularRecuperacion" 
+                               style="width: 100%; padding: 15px 15px 15px 60px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px;"
+                               placeholder="999888777" 
+                               pattern="[0-9]{9}" 
+                               maxlength="9" 
+                               required>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="enviarRecuperacion()" class="btn" style="flex: 1;">
+                        📱 Enviar por WhatsApp
+                    </button>
+                    <button onclick="cerrarRecuperacion()" class="btn-secondary" style="flex: 1;">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let loginInProgress = false;
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            // Verificar si ya hay sesión activa
+            checkExistingSession();
+            
+            // Configurar formulario
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            
+            // Auto-focus en el campo de celular
+            document.getElementById('celular').focus();
+            
+            // Filtrar solo números en el campo de celular
+            document.getElementById('celular').addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/\D/g, '');
+            });
+            
+            document.getElementById('celularRecuperacion').addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/\D/g, '');
+            });
+        });
+
+        /**
+         * Verificar sesión existente
+         */
+        async function checkExistingSession() {
+            try {
+                const response = await fetch('/api/auth.php?action=check_session');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Ya hay sesión activa, redireccionar
+                    window.location.href = 'index.php';
+                }
+            } catch (error) {
+                // No hay sesión, continuar con login
+            }
+        }
+
+        /**
+         * Manejar login
+         */
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            if (loginInProgress) return;
+            
+            const celular = document.getElementById('celular').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!celular || !password) {
+                mostrarAlerta('Por favor completa todos los campos', 'error');
+                return;
+            }
+            
+            if (celular.length !== 9) {
+                mostrarAlerta('El número de celular debe tener 9 dígitos', 'error');
+                return;
+            }
+            
+            loginInProgress = true;
+            mostrarLoading('Iniciando sesión...');
+            
+            try {
+                const response = await fetch('/api/auth.php?action=login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ celular, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    mostrarAlerta('¡Bienvenido al sistema!', 'success');
+                    
+                    // Si es primera vez, mostrar modal de cambio de contraseña
+                    if (data.primera_vez) {
+                        setTimeout(() => {
+                            mostrarCambioContrasena();
+                        }, 1000);
+                    } else {
+                        // Redireccionar después de un momento
+                        setTimeout(() => {
+                            window.location.href = 'index.php';
+                        }, 1000);
+                    }
+                } else {
+                    mostrarAlerta(data.error || 'Error en el login', 'error');
+                    
+                    // Si es usuario no registrado, mostrar info
+                    if (response.status === 404) {
+                        document.getElementById('primeraVezInfo').style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error de conexión. Intenta nuevamente.', 'error');
+            } finally {
+                loginInProgress = false;
+                ocultarLoading();
+            }
+        }
+
+        /**
+         * Mostrar modal de recuperación
+         */
+        function mostrarRecuperacion() {
+            document.getElementById('recuperacionModal').style.display = 'block';
+            document.getElementById('celularRecuperacion').focus();
+        }
+
+        /**
+         * Cerrar modal de recuperación
+         */
+        function cerrarRecuperacion() {
+            document.getElementById('recuperacionModal').style.display = 'none';
+            document.getElementById('celularRecuperacion').value = '';
+        }
+
+        /**
+         * Enviar recuperación de contraseña
+         */
+        async function enviarRecuperacion() {
+            const celular = document.getElementById('celularRecuperacion').value.trim();
+            
+            if (!celular || celular.length !== 9) {
+                mostrarAlerta('Por favor ingresa un número válido de 9 dígitos', 'error');
+                return;
+            }
+            
+            mostrarLoading('Enviando nueva contraseña...');
+            
+            try {
+                const response = await fetch('/api/auth.php?action=forgot_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ celular })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    mostrarAlerta('Nueva contraseña enviada por WhatsApp 📱', 'success');
+                    cerrarRecuperacion();
+                    document.getElementById('primeraVezInfo').style.display = 'block';
+                } else {
+                    mostrarAlerta(data.error || 'Error al enviar contraseña', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error de conexión', 'error');
+            } finally {
+                ocultarLoading();
+            }
+        }
+
+        /**
+         * Mostrar modal de cambio de contraseña (primera vez)
+         */
+        function mostrarCambioContrasena() {
+            // TODO: Implementar modal de cambio de contraseña
+            // Por ahora, redireccionar directamente
+            window.location.href = 'index.php';
+        }
+
+        /**
+         * Mostrar loading
+         */
+        function mostrarLoading(texto = 'Cargando...') {
+            document.getElementById('loadingText').textContent = texto;
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loginForm').style.display = 'none';
+        }
+
+        /**
+         * Ocultar loading
+         */
+        function ocultarLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+        }
+
+        /**
+         * Mostrar alerta
+         */
+        function mostrarAlerta(mensaje, tipo = 'info') {
+            const container = document.getElementById('alertContainer');
+            
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${tipo} show`;
+            alertDiv.innerHTML = mensaje;
+            
+            // Limpiar alertas anteriores
+            container.innerHTML = '';
+            container.appendChild(alertDiv);
+            
+            // Auto-ocultar después de 5 segundos
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
