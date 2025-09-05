@@ -1,0 +1,139 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: imaginatics_ruc
+          MYSQL_USER: imaginatics
+          MYSQL_PASSWORD: imaginations123
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+        ports:
+          - 3306:3306
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: pdo, pdo_mysql, mysqli
+        coverage: none
+
+    - name: Wait for MySQL
+      run: |
+        while ! mysqladmin ping -h"127.0.0.1" --silent; do
+          sleep 1
+        done
+
+    - name: Import database schema
+      run: |
+        mysql -h 127.0.0.1 -u imaginatics -pimaginations123 imaginatics_ruc < database.sql
+
+    - name: Test database connection
+      run: |
+        php -r "
+        try {
+          \$pdo = new PDO('mysql:host=127.0.0.1;dbname=imaginatics_ruc', 'imaginatics', 'imaginations123');
+          echo 'Database connection successful\n';
+        } catch(PDOException \$e) {
+          echo 'Connection failed: ' . \$e->getMessage() . '\n';
+          exit(1);
+        }
+        "
+
+    - name: PHP Syntax Check
+      run: find . -name "*.php" -exec php -l {} \;
+
+    - name: Test API endpoints
+      run: |
+        php -S localhost:8000 &
+        sleep 2
+        
+        # Test basic endpoints
+        curl -f http://localhost:8000/api/diagnostico_especifico.php || exit 1
+        echo "API endpoints test completed"
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build Docker images
+      run: docker-compose build
+
+    - name: Start services
+      run: docker-compose up -d
+
+    - name: Wait for services
+      run: |
+        sleep 30
+        docker-compose ps
+
+    - name: Test application
+      run: |
+        # Wait for web service to be ready
+        timeout 60 bash -c 'until curl -f http://localhost:8080; do sleep 2; done'
+        
+        # Test database connection endpoint
+        curl -f http://localhost:8080/test_db.php || exit 1
+        
+        echo "Docker services test completed"
+
+    - name: Cleanup
+      if: always()
+      run: docker-compose down
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check for secrets in code
+      run: |
+        # Basic security checks
+        if grep -r "password.*=" --include="*.php" --include="*.js" .; then
+          echo "Warning: Found potential hardcoded passwords"
+        fi
+        
+        if grep -r "api_key.*=" --include="*.php" --include="*.js" .; then
+          echo "Warning: Found potential hardcoded API keys"
+        fi
+        
+        echo "Security scan completed"
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [test, docker]
+    if: github.ref == 'refs/heads/master'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Deploy preparation
+      run: |
+        echo "Deployment would run here"
+        echo "This could include:"
+        echo "- Building production Docker images"
+        echo "- Pushing to container registry"
+        echo "- Updating production environment"
+        echo "- Running deployment scripts"
