@@ -1025,15 +1025,10 @@ function excluirClienteEnvio(index) {
     // Si cancela, no hacer nada
     if (motivo === null) return;
 
-    // Marcar como excluido
+    // Marcar como excluido (solo en memoria para este envío)
     clientes[index].excluidoEnvio = true;
     clientes[index].motivoExclusion = motivo.trim() || 'Sin motivo especificado';
     clientes[index].fechaExclusion = new Date().toISOString();
-
-    // Actualizar en base de datos si tiene ID
-    if (cliente.id) {
-        actualizarClienteEnDB(cliente);
-    }
 
     // Refrescar el modal
     mostrarListaEnvio();

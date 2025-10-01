@@ -1,4 +1,5 @@
-<?php 
+<?php
+header('Content-Type: text/html; charset=UTF-8');
 require_once 'auth/session_check.php';
 ?>
 <!DOCTYPE html>
