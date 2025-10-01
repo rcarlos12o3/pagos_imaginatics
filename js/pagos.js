@@ -512,12 +512,71 @@ async function eliminarPago(id) {
 }
 
 /**
- * Exportar pagos
+ * Abrir modal de exportación
  */
-async function exportarPagos() {
+function exportarPagos() {
+    // Establecer mes y año actual por defecto
+    const fechaActual = new Date();
+    const mesActual = fechaActual.getMonth() + 1;
+    const anioActual = fechaActual.getFullYear();
+
+    document.getElementById('exportarMes').value = mesActual;
+    document.getElementById('exportarAnio').value = anioActual;
+
+    document.getElementById('modalExportar').classList.add('active');
+}
+
+/**
+ * Cerrar modal de exportación
+ */
+function cerrarModalExportar() {
+    document.getElementById('modalExportar').classList.remove('active');
+}
+
+/**
+ * Confirmar y realizar exportación
+ */
+async function confirmarExportacion() {
     try {
+        const meses = [
+            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ];
+
+        const tipoFecha = document.getElementById('exportarTipoFecha').value;
+        const mesSeleccionado = document.getElementById('exportarMes').value;
+        const anioSeleccionado = document.getElementById('exportarAnio').value;
+
+        let mes = mesSeleccionado ? parseInt(mesSeleccionado) : null;
+        let anio = anioSeleccionado ? parseInt(anioSeleccionado) : null;
+
+        // Filtrar pagos según mes y año seleccionados
+        let pagosFiltrados = pagosDataFiltrada;
+
+        if (mes || anio) {
+            pagosFiltrados = pagosDataFiltrada.filter(pago => {
+                // Usar la fecha según el tipo seleccionado
+                const fecha = tipoFecha === 'vencimiento'
+                    ? new Date(pago.fecha_vencimiento)
+                    : new Date(pago.fecha_pago);
+
+                const mesFecha = fecha.getMonth() + 1;
+                const anioFecha = fecha.getFullYear();
+
+                let cumpleMes = mes ? mesFecha === mes : true;
+                let cumpleAnio = anio ? anioFecha === anio : true;
+
+                return cumpleMes && cumpleAnio;
+            });
+        }
+
+        if (pagosFiltrados.length === 0) {
+            alert('No hay pagos para exportar con los filtros seleccionados.');
+            return;
+        }
+
         // Preparar datos para exportar
-        const datosExportar = pagosDataFiltrada.map(pago => ({
+        const datosExportar = pagosFiltrados.map(pago => ({
             ID: pago.id,
             Fecha: pago.fecha_pago,
             Cliente: pago.razon_social,
@@ -528,25 +587,33 @@ async function exportarPagos() {
             Banco: pago.banco || '',
             Observaciones: pago.observaciones || ''
         }));
-        
+
         // Convertir a CSV
         const csv = convertirACSV(datosExportar);
-        
+
+        // Construir nombre de archivo con mes/año si aplica
+        let nombreArchivo = 'pagos';
+        if (mes) nombreArchivo += `_${meses[mes - 1]}`;
+        if (anio) nombreArchivo += `_${anio}`;
+        if (!mes && !anio) nombreArchivo += `_${formatearFechaISO()}`;
+        nombreArchivo += '.csv';
+
         // Descargar archivo
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
-        
+
         link.setAttribute('href', url);
-        link.setAttribute('download', `pagos_${formatearFechaISO()}.csv`);
+        link.setAttribute('download', nombreArchivo);
         link.style.visibility = 'hidden';
-        
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
-        mostrarAlerta('Pagos exportados exitosamente', 'success');
-        
+
+        mostrarAlerta(`${pagosFiltrados.length} pagos exportados exitosamente`, 'success');
+        cerrarModalExportar();
+
     } catch (error) {
         console.error('Error:', error);
         mostrarAlerta('Error al exportar pagos', 'error');

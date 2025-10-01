@@ -740,6 +740,61 @@ require_once 'auth/session_check.php';
         </div>
     </div>
 
+    <!-- Modal de Exportar -->
+    <div class="modal-overlay" id="modalExportar">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2>📊 Exportar Pagos a CSV</h2>
+                <button class="modal-close" onclick="cerrarModalExportar()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: #666; margin-bottom: 20px;">Seleccione el período que desea exportar:</p>
+
+                <div class="form-group">
+                    <label for="exportarTipoFecha">Filtrar por:</label>
+                    <select id="exportarTipoFecha">
+                        <option value="pago">Fecha de Pago (cuando se registró)</option>
+                        <option value="vencimiento">Fecha de Vencimiento (del cliente)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="exportarMes">Mes:</label>
+                    <select id="exportarMes">
+                        <option value="">Todos los meses</option>
+                        <option value="1">Enero</option>
+                        <option value="2">Febrero</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Mayo</option>
+                        <option value="6">Junio</option>
+                        <option value="7">Julio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="exportarAnio">Año:</label>
+                    <select id="exportarAnio">
+                        <option value="">Todos los años</option>
+                        <option value="2025">2025</option>
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-success" onclick="confirmarExportacion()">📥 Exportar</button>
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModalExportar()">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="js/config.js"></script>
     <script src="js/pagos.js"></script>
