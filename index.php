@@ -824,6 +824,7 @@ require_once 'auth/session_check.php';
                     <div class="section-title">5. Envio en Lote</div>
 
                     <div class="btn-group">
+                        <button class="btn btn-success" id="btnVerListaEnvio" onclick="mostrarListaEnvio()" disabled>📋 Ver Lista de Envío</button>
                         <button class="btn btn-primary" id="btnEnviarLote" onclick="enviarLote()" disabled>Enviar Todo
                             por WhatsApp</button>
                         <button class="btn btn-warning" id="btnVistaPrevia" onclick="mostrarVistaPrevia()"
@@ -877,6 +878,50 @@ require_once 'auth/session_check.php';
                             Seleccione un cliente para ver la vista previa
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Lista de Envío -->
+    <div id="modalListaEnvio" class="modal-overlay" style="display: none;" onclick="cerrarModalListaEnvio(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>📋 Lista de Clientes para Envío</h2>
+                <button class="modal-close" onclick="cerrarModalListaEnvio()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="status-info-text" style="margin-bottom: 20px;">
+                    <strong>Total de clientes:</strong> <span id="totalClientesEnvio">0</span>
+                </div>
+                <div id="listaEnvioContainer" style="max-height: 500px; overflow-y: auto;">
+                    <!-- Aquí se llenará dinámicamente la lista -->
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-secondary" onclick="cerrarModalListaEnvio()">Cerrar</button>
+                    <button class="btn btn-primary" onclick="cerrarModalListaEnvio(); enviarLote();">Proceder con Envío</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Notificaciones de Vencimiento -->
+    <div id="modalVencimientos" class="modal-overlay" style="display: none;" onclick="cerrarModalVencimientos(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>⚠️ Notificaciones de Vencimiento</h2>
+                <button class="modal-close" onclick="cerrarModalVencimientos()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="status-info-text" style="margin-bottom: 20px;">
+                    <strong>Total de clientes a notificar:</strong> <span id="totalClientesVencimiento">0</span>
+                </div>
+                <div id="listaVencimientosContainer" style="max-height: 500px; overflow-y: auto;">
+                    <!-- Aquí se llenará dinámicamente la lista -->
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-secondary" onclick="cerrarModalVencimientos()">Cerrar</button>
+                    <button class="btn btn-warning" onclick="cerrarModalVencimientos(); enviarRecordatorios();" id="btnEnviarRecordatoriosModal">Enviar Recordatorios</button>
                 </div>
             </div>
         </div>

@@ -48,6 +48,33 @@ async function enviarLote() {
         return;
     }
 
+    // Filtrar solo clientes que necesitan orden de pago (vencidos o próximos a vencer) y no excluidos
+    const clientesParaEnviar = clientes.filter(cliente => {
+        // Verificar si está excluido manualmente
+        if (cliente.excluidoEnvio) {
+            return false;
+        }
+
+        const hoy = obtenerFechaPeru();
+        const fecha = new Date(cliente.fecha);
+        hoy.setHours(0, 0, 0, 0);
+        fecha.setHours(0, 0, 0, 0);
+        const diferenciaDias = Math.floor((fecha - hoy) / (1000 * 60 * 60 * 24));
+
+        // Solo enviar si está vencido o vence en los próximos 7 días
+        return diferenciaDias <= 7;
+    });
+
+    const clientesExcluidos = clientes.filter(c => c.excluidoEnvio).length;
+
+    if (clientesParaEnviar.length === 0) {
+        const mensaje = clientesExcluidos > 0
+            ? `❌ No hay clientes disponibles para envío.\n\n• ${clientesExcluidos} excluido${clientesExcluidos !== 1 ? 's' : ''} manualmente`
+            : '❌ No hay clientes con pagos vencidos o próximos a vencer.\n\nLas órdenes de pago solo se envían a clientes que:\n• Tienen pagos vencidos\n• Vencen en los próximos 7 días';
+        alert(mensaje);
+        return;
+    }
+
     // Cargar configuración antes de enviar
     const configCargada = await cargarConfiguracionWhatsApp();
     if (!configCargada) {
@@ -55,11 +82,32 @@ async function enviarLote() {
         return;
     }
 
-    if (!confirm('¿Enviar ordenes de pago a ' + clientes.length + ' clientes por WhatsApp?')) {
+    // Verificar horario laboral
+    const checkHorario = verificarHorarioEnvio();
+    if (checkHorario.advertencia) {
+        if (!confirm(checkHorario.mensaje)) {
+            return;
+        }
+    }
+
+    // Calcular tiempo estimado (modo cauteloso con pausas aleatorias)
+    const tiempoEstimadoMin = Math.ceil(clientesParaEnviar.length * 40 / 60); // ~40 segundos por cliente mínimo
+    const tiempoEstimadoMax = Math.ceil(clientesParaEnviar.length * 80 / 60); // ~80 segundos por cliente máximo
+
+    let mensaje = `¿Enviar órdenes de pago a ${clientesParaEnviar.length} cliente${clientesParaEnviar.length !== 1 ? 's' : ''} por WhatsApp?\n\n`;
+    mensaje += `⏱️ Tiempo estimado: ${tiempoEstimadoMin}-${tiempoEstimadoMax} minutos\n`;
+    mensaje += `🤖 Modo CAUTELOSO: pausas 10-20s entre mensajes, 30-60s entre clientes`;
+
+    const totalExcluidos = clientes.length - clientesParaEnviar.length;
+    if (totalExcluidos > 0) {
+        mensaje += `\n\n(Se excluyen ${totalExcluidos} cliente${totalExcluidos !== 1 ? 's' : ''})`;
+    }
+
+    if (!confirm(mensaje)) {
         return;
     }
 
-    await procesarEnvioReal(clientes, 'orden_pago', false);
+    await procesarEnvioReal(clientesParaEnviar, 'orden_pago', false);
 }
 
 // Enviar recordatorios de vencimiento
@@ -69,7 +117,23 @@ async function enviarRecordatorios() {
         return;
     }
 
-    if (!confirm('¿Enviar recordatorios a ' + clientesNotificar.length + ' clientes?')) {
+    // Verificar horario laboral
+    const checkHorario = verificarHorarioEnvio();
+    if (checkHorario.advertencia) {
+        if (!confirm(checkHorario.mensaje)) {
+            return;
+        }
+    }
+
+    // Calcular tiempo estimado (modo cauteloso)
+    const tiempoEstimadoMin = Math.ceil(clientesNotificar.length * 40 / 60);
+    const tiempoEstimadoMax = Math.ceil(clientesNotificar.length * 80 / 60);
+
+    let mensaje = `¿Enviar recordatorios a ${clientesNotificar.length} cliente${clientesNotificar.length !== 1 ? 's' : ''}?\n\n`;
+    mensaje += `⏱️ Tiempo estimado: ${tiempoEstimadoMin}-${tiempoEstimadoMax} minutos\n`;
+    mensaje += `🤖 Modo CAUTELOSO: pausas 10-20s entre mensajes, 30-60s entre clientes`;
+
+    if (!confirm(mensaje)) {
         return;
     }
 
@@ -89,7 +153,7 @@ async function enviarRecordatorios() {
         const data = await response.json();
 
         if (data.success && data.action === 'procesar_recordatorios_frontend') {
-            // Procesar con JavaScript para mejor calidad
+            // Procesar con JavaScript para mejor calidad (modo cauteloso)
             await procesarRecordatoriosConImagenes(data.clientes);
         } else {
             alert('Error: ' + (data.error || 'Error desconocido'));
@@ -101,15 +165,30 @@ async function enviarRecordatorios() {
 }
 
 async function procesarRecordatoriosConImagenes(clientes) {
-    console.log(`🎨 Procesando ${clientes.length} recordatorios con imágenes HD...`);
+    console.log(`🎨 Procesando ${clientes.length} recordatorios con imágenes HD (MODO CAUTELOSO)...`);
+
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
 
     let exitosos = 0;
     let errores = 0;
 
-    for (const cliente of clientes) {
+    // Deshabilitar botones
+    document.getElementById('btnEnviarRecordatorios').disabled = true;
+
+    for (let i = 0; i < clientes.length; i++) {
+        const cliente = clientes[i];
+
         try {
+            // Actualizar progreso
+            const progreso = ((i / clientes.length) * 100).toFixed(0);
+            if (progressBar) {
+                progressBar.style.width = progreso + '%';
+                progressText.textContent = `Enviando recordatorio ${i + 1} de ${clientes.length}: ${cliente.razon_social}...`;
+            }
+
             console.log(`📤 Generando recordatorio para: ${cliente.razon_social}`);
-            console.log('Datos del cliente:', cliente); // Debug para ver la estructura
+            console.log('Datos del cliente:', cliente);
 
             // USAR EL CAMPO CORRECTO
             const diasRestantes = parseInt(cliente.dias_restantes);
@@ -131,8 +210,8 @@ async function procesarRecordatoriosConImagenes(clientes) {
                 body: JSON.stringify({
                     action: 'generar_imagen_recordatorio',
                     cliente_id: cliente.id,
-                    numero_destino: cliente.whatsapp,  // Agregar número de destino
-                    dias_restantes: diasRestantes,  // ← CORREGIDO: usar la variable
+                    numero_destino: cliente.whatsapp,
+                    dias_restantes: diasRestantes,
                     imagen_base64: imagenBase64
                 })
             });
@@ -145,8 +224,9 @@ async function procesarRecordatoriosConImagenes(clientes) {
             }
 
             if (dataImagen.success) {
-                // Esperar antes del texto
-                await sleep(2000);
+                // Pausa aleatoria antes de enviar texto (10-20 segundos) - modo cauteloso
+                if (progressText) progressText.textContent = `Esperando antes de enviar texto (comportamiento humano)...`;
+                await sleepRandom(10000, 20000);
 
                 // Generar mensaje
                 const mensaje = generarMensajeRecordatorio(cliente, diasRestantes);
@@ -183,11 +263,29 @@ async function procesarRecordatoriosConImagenes(clientes) {
             console.error(`❌ Error con ${cliente.razon_social}:`, error);
         }
 
-        // Pausa entre envíos
-        await sleep(3000);
+        // Pausa aleatoria entre clientes (30-60 segundos) - modo cauteloso
+        if (i < clientes.length - 1) {
+            if (progressText) progressText.textContent = `Pausa entre clientes (modo cauteloso)...`;
+            await sleepRandom(30000, 60000);
+        }
+    }
+
+    // Completar progreso
+    if (progressBar) {
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Recordatorios completados';
     }
 
     alert(`📊 Recordatorios procesados:\n✅ Exitosos: ${exitosos}\n❌ Errores: ${errores}`);
+
+    // Restaurar interfaz
+    setTimeout(() => {
+        if (progressBar) {
+            progressBar.style.width = '0%';
+            progressText.textContent = '';
+        }
+        document.getElementById('btnEnviarRecordatorios').disabled = clientesNotificar.length === 0;
+    }, 3000);
 }
 
 // ============================================
@@ -259,30 +357,32 @@ async function procesarEnvioReal(lista, accion, esRecordatorio = false) {
             progressBar.style.width = '25%';
         }
 
-        // Enviar por lotes pequeños para no saturar la API
-        const LOTE_SIZE = 3;
+        // Enviar de uno en uno para simular comportamiento humano
         let exitosos = 0;
         let errores = [];
 
-        for (let i = 0; i < clientesParaEnvio.length; i += LOTE_SIZE) {
-            const lote = clientesParaEnvio.slice(i, i + LOTE_SIZE);
+        for (let i = 0; i < clientesParaEnvio.length; i++) {
+            const cliente = clientesParaEnvio[i];
 
             // Actualizar progreso (ahora empieza desde 25%)
             const progresoBase = 25 + ((i / clientesParaEnvio.length) * 65);
             if (progressBar) {
                 progressBar.style.width = progresoBase + '%';
-                progressText.textContent = `Enviando lote ${Math.floor(i / LOTE_SIZE) + 1} de ${Math.ceil(clientesParaEnvio.length / LOTE_SIZE)}...`;
+                progressText.textContent = `Enviando ${i + 1} de ${clientesParaEnvio.length}: ${cliente.razon_social}...`;
             }
 
-            // Procesar lote
-            const resultadoLote = await enviarLoteWhatsApp(lote, accion);
-            exitosos += resultadoLote.exitosos;
-            errores = errores.concat(resultadoLote.errores);
+            // Procesar cliente individual
+            const resultadoCliente = await enviarClienteWhatsApp(cliente, accion);
+            if (resultadoCliente.success) {
+                exitosos++;
+            } else {
+                errores.push(resultadoCliente.error);
+            }
 
-            // Pausa entre lotes
-            if (i + LOTE_SIZE < clientesParaEnvio.length) {
-                if (progressText) progressText.textContent = `Esperando antes del siguiente lote...`;
-                await sleep(3000);
+            // Pausa aleatoria entre clientes (30-60 segundos) - comportamiento humano cauteloso
+            if (i < clientesParaEnvio.length - 1) {
+                if (progressText) progressText.textContent = `Pausa entre clientes (modo cauteloso)...`;
+                await sleepRandom(30000, 60000);
             }
         }
 
@@ -312,124 +412,123 @@ async function procesarEnvioReal(lista, accion, esRecordatorio = false) {
     }
 }
 
-// Enviar un lote específico por WhatsApp
-async function enviarLoteWhatsApp(lote, accion) {
-    let exitosos = 0;
-    let errores = [];
+// Enviar a un cliente individual por WhatsApp (comportamiento humano)
+async function enviarClienteWhatsApp(cliente, accion) {
+    try {
+        console.log(`🎨 Generando imagen HD para: ${cliente.razon_social}`);
 
-    for (const cliente of lote) {
-        try {
-            console.log(`🎨 Generando imagen HD para: ${cliente.razon_social}`);
+        // GENERAR CANVAS DE ALTA RESOLUCIÓN (sin escalar)
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
 
-            // GENERAR CANVAS DE ALTA RESOLUCIÓN (sin escalar)
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+        // Tamaño completo (igual que en main.js)
+        canvas.width = 915;
+        canvas.height = 550;
 
-            // Tamaño completo (igual que en main.js)
-            canvas.width = 915;
-            canvas.height = 550;
+        // Fondo blanco
+        ctx.fillStyle = CONFIG.COLORES.FONDO_BLANCO;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Fondo blanco
-            ctx.fillStyle = CONFIG.COLORES.FONDO_BLANCO;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Configurar fuentes
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
 
-            // Configurar fuentes
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'top';
+        // Título principal
+        ctx.fillStyle = CONFIG.COLORES.PRIMARIO;
+        ctx.font = 'bold 28px Arial';
+        ctx.fillText('IMAGINATICS PERU SAC', 50, 40);
 
-            // Título principal
-            ctx.fillStyle = CONFIG.COLORES.PRIMARIO;
-            ctx.font = 'bold 28px Arial';
-            ctx.fillText('IMAGINATICS PERU SAC', 50, 40);
+        // Línea separadora
+        ctx.strokeStyle = CONFIG.COLORES.PRIMARIO;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(50, 80);
+        ctx.lineTo(865, 80);
+        ctx.stroke();
 
-            // Línea separadora
-            ctx.strokeStyle = CONFIG.COLORES.PRIMARIO;
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(50, 80);
-            ctx.lineTo(865, 80);
-            ctx.stroke();
+        // Texto principal
+        ctx.fillStyle = CONFIG.COLORES.TEXTO_PRINCIPAL;
+        ctx.font = '24px Arial';
+        ctx.fillText('Queremos recordarte que tiene 1', 50, 120);
+        ctx.fillText('orden de pago que vence el dia', 50, 150);
 
-            // Texto principal
-            ctx.fillStyle = CONFIG.COLORES.TEXTO_PRINCIPAL;
-            ctx.font = '24px Arial';
-            ctx.fillText('Queremos recordarte que tiene 1', 50, 120);
-            ctx.fillText('orden de pago que vence el dia', 50, 150);
+        // Fecha destacada
+        const fechaTexto = convertirFechaATexto(cliente.fecha_vencimiento);
+        ctx.fillStyle = CONFIG.COLORES.SECUNDARIO;
+        ctx.font = 'bold 32px Arial';
+        const fechaWidth = ctx.measureText(fechaTexto).width;
+        const centerX = (canvas.width - fechaWidth) / 2;
+        ctx.fillText(fechaTexto, centerX, 200);
 
-            // Fecha destacada
-            const fechaTexto = convertirFechaATexto(cliente.fecha_vencimiento);
-            ctx.fillStyle = CONFIG.COLORES.SECUNDARIO;
-            ctx.font = 'bold 32px Arial';
-            const fechaWidth = ctx.measureText(fechaTexto).width;
-            const centerX = (canvas.width - fechaWidth) / 2;
-            ctx.fillText(fechaTexto, centerX, 200);
+        // Marco para la fecha
+        ctx.strokeStyle = CONFIG.COLORES.SECUNDARIO;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(centerX - 20, 195, fechaWidth + 40, 45);
 
-            // Marco para la fecha
-            ctx.strokeStyle = CONFIG.COLORES.SECUNDARIO;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(centerX - 20, 195, fechaWidth + 40, 45);
+        // Información del cliente
+        ctx.fillStyle = CONFIG.COLORES.TEXTO_SECUNDARIO;
+        ctx.font = '18px Arial';
+        ctx.fillText('Cliente: ' + cliente.razon_social, 50, 270);
+        ctx.fillText('RUC: ' + cliente.ruc, 50, 295);
+        ctx.fillText('Monto a pagar: S/ ' + cliente.monto, 50, 320);
 
-            // Información del cliente
-            ctx.fillStyle = CONFIG.COLORES.TEXTO_SECUNDARIO;
-            ctx.font = '18px Arial';
-            ctx.fillText('Cliente: ' + cliente.razon_social, 50, 270);
-            ctx.fillText('RUC: ' + cliente.ruc, 50, 295);
-            ctx.fillText('Monto a pagar: S/ ' + cliente.monto, 50, 320);
+        // Cuentas bancarias
+        ctx.fillStyle = CONFIG.COLORES.PRIMARIO;
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText('Realice su pago a las siguientes cuentas:', 50, 360);
 
-            // Cuentas bancarias
-            ctx.fillStyle = CONFIG.COLORES.PRIMARIO;
-            ctx.font = 'bold 20px Arial';
-            ctx.fillText('Realice su pago a las siguientes cuentas:', 50, 360);
+        ctx.fillStyle = CONFIG.COLORES.TEXTO_SECUNDARIO;
+        ctx.font = '16px Arial';
+        CONFIG.CUENTAS_BANCARIAS.forEach((cuenta, index) => {
+            ctx.fillText(cuenta, 50, 390 + (index * 25));
+        });
 
-            ctx.fillStyle = CONFIG.COLORES.TEXTO_SECUNDARIO;
-            ctx.font = '16px Arial';
-            CONFIG.CUENTAS_BANCARIAS.forEach((cuenta, index) => {
-                ctx.fillText(cuenta, 50, 390 + (index * 25));
-            });
+        // CARGAR IMÁGENES DE FORMA SÍNCRONA
+        const imagenCanvas = await cargarImagenesEnCanvasSync(ctx);
 
-            // CARGAR IMÁGENES DE FORMA SÍNCRONA
-            const imagenCanvas = await cargarImagenesEnCanvasSync(ctx);
+        // Convertir a base64
+        const imagenBase64 = canvasToBase64(canvas);
 
-            // Convertir a base64
-            const imagenBase64 = canvasToBase64(canvas);
+        console.log(`📤 Enviando imagen HD para: ${cliente.razon_social}`);
 
-            console.log(`📤 Enviando imagen HD para: ${cliente.razon_social}`);
+        // Enviar imagen
+        const resultadoImagen = await enviarImagenWhatsApp(cliente, imagenBase64);
 
-            // Enviar imagen
-            const resultadoImagen = await enviarImagenWhatsApp(cliente, imagenBase64);
-
-            if (!resultadoImagen.success) {
-                errores.push(`${cliente.razon_social}: Error enviando imagen - ${resultadoImagen.error}`);
-                continue;
-            }
-
-            // Esperar antes de enviar texto
-            await sleep(2000);
-
-            // Generar y enviar texto
-            const mensaje = generarMensajeOrdenPago(cliente);
-            const resultadoTexto = await enviarTextoWhatsApp(cliente, mensaje);
-
-            if (resultadoTexto.success) {
-                exitosos++;
-                console.log(`✅ Enviado completo HD a ${cliente.razon_social}`);
-            } else {
-                errores.push(`${cliente.razon_social}: Error enviando texto - ${resultadoTexto.error}`);
-            }
-
-            // Registrar en base de datos
-            await registrarEnvioEnBD(cliente, accion, resultadoImagen.success && resultadoTexto.success);
-
-        } catch (error) {
-            console.error(`Error procesando ${cliente.razon_social}:`, error);
-            errores.push(`${cliente.razon_social}: ${error.message}`);
+        if (!resultadoImagen.success) {
+            return {
+                success: false,
+                error: `${cliente.razon_social}: Error enviando imagen - ${resultadoImagen.error}`
+            };
         }
 
-        // Pausa entre envíos individuales
-        await sleep(1500);
-    }
+        // Pausa aleatoria antes de enviar texto (10-20 segundos) - simula escritura humana
+        await sleepRandom(10000, 20000);
 
-    return { exitosos, errores };
+        // Generar y enviar texto
+        const mensaje = generarMensajeOrdenPago(cliente);
+        const resultadoTexto = await enviarTextoWhatsApp(cliente, mensaje);
+
+        if (!resultadoTexto.success) {
+            return {
+                success: false,
+                error: `${cliente.razon_social}: Error enviando texto - ${resultadoTexto.error}`
+            };
+        }
+
+        console.log(`✅ Enviado completo HD a ${cliente.razon_social}`);
+
+        // Registrar en base de datos
+        await registrarEnvioEnBD(cliente, accion, true);
+
+        return { success: true };
+
+    } catch (error) {
+        console.error(`Error procesando ${cliente.razon_social}:`, error);
+        return {
+            success: false,
+            error: `${cliente.razon_social}: ${error.message}`
+        };
+    }
 }
 
 // ============================================
@@ -665,6 +764,40 @@ function mostrarResultadosEnvio(exitosos, errores, total, tipo) {
 // Función auxiliar para pausas
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Función para generar tiempo de espera aleatorio (más humano)
+function sleepRandom(minMs, maxMs) {
+    const randomTime = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+    console.log(`⏱️ Esperando ${(randomTime / 1000).toFixed(1)}s (comportamiento humano)`);
+    return new Promise(resolve => setTimeout(resolve, randomTime));
+}
+
+// Verificar si es horario laboral (8am - 8pm hora de Perú)
+function esHorarioLaboral() {
+    const ahora = obtenerFechaPeru();
+    const hora = ahora.getHours();
+    return hora >= 8 && hora < 20;
+}
+
+// Obtener mensaje de advertencia de horario
+function verificarHorarioEnvio() {
+    const ahora = obtenerFechaPeru();
+    const hora = ahora.getHours();
+
+    if (hora < 8) {
+        return {
+            advertencia: true,
+            mensaje: `⚠️ ADVERTENCIA: Son las ${hora}:${ahora.getMinutes().toString().padStart(2, '0')} AM\n\nEnviar mensajes antes de las 8:00 AM puede parecer spam.\n\n¿Desea continuar de todas formas?`
+        };
+    } else if (hora >= 20) {
+        return {
+            advertencia: true,
+            mensaje: `⚠️ ADVERTENCIA: Son las ${hora}:${ahora.getMinutes().toString().padStart(2, '0')}\n\nEnviar mensajes después de las 8:00 PM puede ser molesto para los clientes.\n\n¿Desea continuar de todas formas?`
+        };
+    }
+
+    return { advertencia: false };
 }
 
 // Función para cargar imágenes de forma síncrona

@@ -241,21 +241,12 @@ function searchClientes($database, $query) {
  */
 function getVencimientos($database, $dias) {
     try {
+        // Consulta simplificada: NO excluir clientes con pagos previos
+        // porque esos pagos corresponden al periodo anterior
         $sql = "SELECT c.*,
                 DATEDIFF(c.fecha_vencimiento, CURDATE()) as dias_restantes,
                 (SELECT MAX(hp.fecha_pago) FROM historial_pagos hp WHERE hp.cliente_id = c.id) as ultimo_pago,
                 CASE
-                    -- Si existe un pago en el periodo actual, está PAGADO
-                    WHEN EXISTS (
-                        SELECT 1 FROM historial_pagos hp 
-                        WHERE hp.cliente_id = c.id 
-                        AND (
-                            (c.tipo_servicio = 'mensual' AND hp.fecha_pago >= DATE_SUB(c.fecha_vencimiento, INTERVAL 1 MONTH))
-                            OR (c.tipo_servicio = 'trimestral' AND hp.fecha_pago >= DATE_SUB(c.fecha_vencimiento, INTERVAL 3 MONTH))
-                            OR (c.tipo_servicio = 'semestral' AND hp.fecha_pago >= DATE_SUB(c.fecha_vencimiento, INTERVAL 6 MONTH))
-                            OR ((c.tipo_servicio = 'anual' OR c.tipo_servicio IS NULL) AND hp.fecha_pago >= DATE_SUB(c.fecha_vencimiento, INTERVAL 12 MONTH))
-                        )
-                    ) THEN 'PAGADO'
                     WHEN DATEDIFF(c.fecha_vencimiento, CURDATE()) < 0 THEN 'VENCIDO'
                     WHEN DATEDIFF(c.fecha_vencimiento, CURDATE()) = 0 THEN 'VENCE_HOY'
                     ELSE 'POR_VENCER'
@@ -268,12 +259,11 @@ function getVencimientos($database, $dias) {
 
         $clientes = $database->fetchAll($sql, [$dias]);
 
-        // Agrupar por estado
+        // Agrupar por estado (sin categoria PAGADOS)
         $resultado = [
             'vencidos' => [],
             'vence_hoy' => [],
             'por_vencer' => [],
-            'pagados' => [],
             'total' => count($clientes)
         ];
 
@@ -287,9 +277,6 @@ function getVencimientos($database, $dias) {
                     break;
                 case 'POR_VENCER':
                     $resultado['por_vencer'][] = $cliente;
-                    break;
-                case 'PAGADO':
-                    $resultado['pagados'][] = $cliente;
                     break;
             }
         }

@@ -524,43 +524,133 @@ function mostrarCanvasEnVista(canvas) {
 // ============================================
 
 function mostrarResultadosVencimientos(resultado) {
-    const hoy = obtenerFechaPeru().toLocaleDateString('es-PE');
-    let textoResultado = 'Resumen de Vencimientos (al ' + hoy + '):\n\n';
+    const totalClientes = resultado.vencidos.length + resultado.vence_hoy.length + resultado.por_vencer.length;
 
+    if (totalClientes === 0) {
+        alert('✅ ¡Todos los clientes están al día!');
+        return;
+    }
+
+    const modal = document.getElementById('modalVencimientos');
+    const totalSpan = document.getElementById('totalClientesVencimiento');
+    const container = document.getElementById('listaVencimientosContainer');
+
+    // Actualizar total
+    totalSpan.textContent = totalClientes;
+
+    let html = '';
+
+    // Sección de VENCIDOS
     if (resultado.vencidos.length > 0) {
-        textoResultado += 'VENCIDOS (' + resultado.vencidos.length + ' clientes):\n';
-        resultado.vencidos.forEach(cliente => {
+        html += `
+            <div style="margin-bottom: 20px;">
+                <div style="background: #ff6b6b; color: white; padding: 12px; border-radius: 8px 8px 0 0; font-weight: bold;">
+                    🚨 VENCIDOS (${resultado.vencidos.length})
+                </div>
+                <div style="border: 2px solid #ff6b6b; border-top: none; border-radius: 0 0 8px 8px; overflow: hidden;">
+        `;
+
+        resultado.vencidos.forEach((cliente, index) => {
             const diasAtraso = Math.abs(cliente.dias_restantes);
-            textoResultado += '• ' + cliente.razon_social.substring(0, 30) + ': ' + diasAtraso + ' dias de atraso\n';
+            html += `
+                <div style="padding: 12px; border-bottom: 1px solid #f8f9fa; ${index % 2 === 0 ? 'background: #fff5f5;' : 'background: white;'}">
+                    <div style="font-weight: bold; color: #c92a2a; margin-bottom: 4px;">${cliente.razon_social}</div>
+                    <div style="font-size: 13px; color: #666;">
+                        RUC: ${cliente.ruc} •
+                        WhatsApp: ${cliente.whatsapp ? (cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp) : 'No registrado'} •
+                        Monto: S/ ${cliente.monto} •
+                        <strong style="color: #c92a2a;">${diasAtraso} día${diasAtraso !== 1 ? 's' : ''} de atraso</strong>
+                    </div>
+                </div>
+            `;
         });
-        textoResultado += '\n';
+
+        html += '</div></div>';
     }
 
+    // Sección de VENCE HOY
     if (resultado.vence_hoy.length > 0) {
-        textoResultado += 'VENCE HOY (' + resultado.vence_hoy.length + ' clientes):\n';
-        resultado.vence_hoy.forEach(cliente => {
-            textoResultado += '• ' + cliente.razon_social.substring(0, 30) + ': VENCE HOY\n';
+        html += `
+            <div style="margin-bottom: 20px;">
+                <div style="background: #ff8800; color: white; padding: 12px; border-radius: 8px 8px 0 0; font-weight: bold;">
+                    ⏰ VENCE HOY (${resultado.vence_hoy.length})
+                </div>
+                <div style="border: 2px solid #ff8800; border-top: none; border-radius: 0 0 8px 8px; overflow: hidden;">
+        `;
+
+        resultado.vence_hoy.forEach((cliente, index) => {
+            html += `
+                <div style="padding: 12px; border-bottom: 1px solid #f8f9fa; ${index % 2 === 0 ? 'background: #fff4e6;' : 'background: white;'}">
+                    <div style="font-weight: bold; color: #d9480f; margin-bottom: 4px;">${cliente.razon_social}</div>
+                    <div style="font-size: 13px; color: #666;">
+                        RUC: ${cliente.ruc} •
+                        WhatsApp: ${cliente.whatsapp ? (cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp) : 'No registrado'} •
+                        Monto: S/ ${cliente.monto} •
+                        <strong style="color: #d9480f;">ÚLTIMO DÍA</strong>
+                    </div>
+                </div>
+            `;
         });
-        textoResultado += '\n';
+
+        html += '</div></div>';
     }
 
+    // Sección de POR VENCER
     if (resultado.por_vencer.length > 0) {
-        textoResultado += 'POR VENCER (' + resultado.por_vencer.length + ' clientes):\n';
-        resultado.por_vencer.forEach(cliente => {
-            textoResultado += '• ' + cliente.razon_social.substring(0, 30) + ': ' + cliente.dias_restantes + ' dias restantes\n';
+        html += `
+            <div style="margin-bottom: 20px;">
+                <div style="background: #fab005; color: white; padding: 12px; border-radius: 8px 8px 0 0; font-weight: bold;">
+                    ⚠️ POR VENCER (${resultado.por_vencer.length})
+                </div>
+                <div style="border: 2px solid #fab005; border-top: none; border-radius: 0 0 8px 8px; overflow: hidden;">
+        `;
+
+        resultado.por_vencer.forEach((cliente, index) => {
+            html += `
+                <div style="padding: 12px; border-bottom: 1px solid #f8f9fa; ${index % 2 === 0 ? 'background: #fffae6;' : 'background: white;'}">
+                    <div style="font-weight: bold; color: #e67700; margin-bottom: 4px;">${cliente.razon_social}</div>
+                    <div style="font-size: 13px; color: #666;">
+                        RUC: ${cliente.ruc} •
+                        WhatsApp: ${cliente.whatsapp ? (cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp) : 'No registrado'} •
+                        Monto: S/ ${cliente.monto} •
+                        <strong style="color: #e67700;">${cliente.dias_restantes} día${cliente.dias_restantes !== 1 ? 's' : ''} restantes</strong>
+                    </div>
+                </div>
+            `;
         });
-        textoResultado += '\n';
+
+        html += '</div></div>';
     }
 
-    const notificationArea = document.getElementById('notificationArea');
-    if (notificationArea) {
-        notificationArea.textContent = textoResultado;
-    }
+    // Resumen
+    html += `
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; border-left: 4px solid #fab005;">
+            <h3 style="color: #495057; margin-bottom: 10px;">📊 Resumen</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #ff6b6b;">${resultado.vencidos.length}</div>
+                    <div style="font-size: 12px; color: #666;">Vencidos</div>
+                </div>
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #ff8800;">${resultado.vence_hoy.length}</div>
+                    <div style="font-size: 12px; color: #666;">Vence Hoy</div>
+                </div>
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #fab005;">${resultado.por_vencer.length}</div>
+                    <div style="font-size: 12px; color: #666;">Por Vencer</div>
+                </div>
+            </div>
+        </div>
+    `;
 
-    if (clientesNotificar.length > 0) {
-        alert('Se encontraron ' + clientesNotificar.length + ' clientes que necesitan notificacion');
-    } else {
-        alert('Todos los clientes estan al dia!');
+    container.innerHTML = html;
+    modal.style.display = 'flex';
+}
+
+function cerrarModalVencimientos(event) {
+    if (!event || event.target.id === 'modalVencimientos') {
+        const modal = document.getElementById('modalVencimientos');
+        modal.style.display = 'none';
     }
 }
 
@@ -571,19 +661,37 @@ function mostrarResultadosVencimientos(resultado) {
 function obtenerEstadoPago(fechaVencimiento) {
     const hoy = obtenerFechaPeru();
     const fecha = new Date(fechaVencimiento);
-    
+
     // Ajustar fecha para evitar problemas de zona horaria
     hoy.setHours(0, 0, 0, 0);
     fecha.setHours(0, 0, 0, 0);
-    
+
     const diferenciaDias = Math.floor((fecha - hoy) / (1000 * 60 * 60 * 24));
-    
+
     if (diferenciaDias < 0) {
-        return { clase: 'vencido', estado: 'vencido' };
+        return {
+            clase: 'vencido',
+            estado: 'vencido',
+            texto: `VENCIDO (${Math.abs(diferenciaDias)} día${Math.abs(diferenciaDias) !== 1 ? 's' : ''})`
+        };
+    } else if (diferenciaDias === 0) {
+        return {
+            clase: 'proximo-vencer',
+            estado: 'vence_hoy',
+            texto: 'VENCE HOY'
+        };
     } else if (diferenciaDias <= 7) {
-        return { clase: 'proximo-vencer', estado: 'proximo_vencer' };
+        return {
+            clase: 'proximo-vencer',
+            estado: 'proximo_vencer',
+            texto: `PRÓXIMO (${diferenciaDias} día${diferenciaDias !== 1 ? 's' : ''})`
+        };
     } else {
-        return { clase: 'al-dia', estado: 'al_dia' };
+        return {
+            clase: 'al-dia',
+            estado: 'al_dia',
+            texto: `AL DÍA (${diferenciaDias} día${diferenciaDias !== 1 ? 's' : ''})`
+        };
     }
 }
 
@@ -619,11 +727,13 @@ function habilitarBotones() {
     const btnEliminar = document.getElementById('btnEliminarSeleccionado');
     const btnEditar = document.getElementById('btnEditarSeleccionado'); // AGREGAR
     const btnEnviarLote = document.getElementById('btnEnviarLote');
+    const btnVerListaEnvio = document.getElementById('btnVerListaEnvio');
     const btnEnviarRecordatorios = document.getElementById('btnEnviarRecordatorios');
 
     if (btnEliminar) btnEliminar.disabled = clientes.length === 0;
     if (btnEditar) btnEditar.disabled = clientes.length === 0; // AGREGAR
     if (btnEnviarLote) btnEnviarLote.disabled = clientes.length === 0;
+    if (btnVerListaEnvio) btnVerListaEnvio.disabled = clientes.length === 0;
     if (btnEnviarRecordatorios) btnEnviarRecordatorios.disabled = clientesNotificar.length === 0;
 }
 
@@ -631,11 +741,13 @@ function deshabilitarBotones() {
     const btnEliminar = document.getElementById('btnEliminarSeleccionado');
     const btnEditar = document.getElementById('btnEditarSeleccionado'); // AGREGAR
     const btnEnviarLote = document.getElementById('btnEnviarLote');
+    const btnVerListaEnvio = document.getElementById('btnVerListaEnvio');
     const btnEnviarRecordatorios = document.getElementById('btnEnviarRecordatorios');
 
     if (btnEliminar) btnEliminar.disabled = true;
     if (btnEditar) btnEditar.disabled = true; // AGREGAR
     if (btnEnviarLote) btnEnviarLote.disabled = true;
+    if (btnVerListaEnvio) btnVerListaEnvio.disabled = true;
     if (btnEnviarRecordatorios) btnEnviarRecordatorios.disabled = true;
 }
 
@@ -679,9 +791,9 @@ async function logout() {
             const response = await fetch('/api/auth.php?action=logout', {
                 method: 'POST'
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 window.location.href = 'login.html';
             } else {
@@ -694,5 +806,255 @@ async function logout() {
             // Redireccionar de todas formas por seguridad
             window.location.href = 'login.html';
         }
+    }
+}
+
+// ============================================
+// MODAL DE LISTA DE ENVÍO
+// ============================================
+
+function mostrarListaEnvio() {
+    if (clientes.length === 0) {
+        alert('No hay clientes en la lista para enviar');
+        return;
+    }
+
+    // Filtrar solo clientes que necesitan orden de pago (vencidos o próximos a vencer)
+    const clientesParaEnviar = clientes.filter(cliente => {
+        // Verificar si está excluido manualmente
+        if (cliente.excluidoEnvio) {
+            return false;
+        }
+
+        const hoy = obtenerFechaPeru();
+        const fecha = new Date(cliente.fecha);
+        hoy.setHours(0, 0, 0, 0);
+        fecha.setHours(0, 0, 0, 0);
+        const diferenciaDias = Math.floor((fecha - hoy) / (1000 * 60 * 60 * 24));
+
+        // Solo mostrar si está vencido o vence en los próximos 7 días
+        return diferenciaDias <= 7;
+    });
+
+    // Contar excluidos manualmente
+    const clientesExcluidosManual = clientes.filter(c => c.excluidoEnvio).length;
+    const clientesExcluidosAlDia = clientes.filter(c => {
+        if (c.excluidoEnvio) return false;
+        const hoy = obtenerFechaPeru();
+        const fecha = new Date(c.fecha);
+        hoy.setHours(0, 0, 0, 0);
+        fecha.setHours(0, 0, 0, 0);
+        const diferenciaDias = Math.floor((fecha - hoy) / (1000 * 60 * 60 * 24));
+        return diferenciaDias > 7;
+    }).length;
+
+    if (clientesParaEnviar.length === 0) {
+        const mensaje = clientesExcluidosManual > 0
+            ? `❌ No hay clientes disponibles para envío.\n\n• ${clientesExcluidosManual} excluido${clientesExcluidosManual !== 1 ? 's' : ''} manualmente\n• ${clientesExcluidosAlDia} al día (vencen en más de 7 días)`
+            : '❌ No hay clientes con pagos vencidos o próximos a vencer.\n\nLas órdenes de pago solo se envían a clientes que:\n• Tienen pagos vencidos\n• Vencen en los próximos 7 días';
+        alert(mensaje);
+        return;
+    }
+
+    const modal = document.getElementById('modalListaEnvio');
+    const totalSpan = document.getElementById('totalClientesEnvio');
+    const container = document.getElementById('listaEnvioContainer');
+
+    // Actualizar total
+    totalSpan.textContent = clientesParaEnviar.length;
+
+    // Mensaje informativo si hay clientes excluidos
+    let html = '';
+    if (clientesExcluidosManual > 0 || clientesExcluidosAlDia > 0) {
+        html += `<div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin-bottom: 15px; border-left: 4px solid #ffc107;">`;
+        html += `<strong>ℹ️ Información:</strong> `;
+        const mensajes = [];
+        if (clientesExcluidosManual > 0) {
+            mensajes.push(`${clientesExcluidosManual} excluido${clientesExcluidosManual !== 1 ? 's' : ''} manualmente`);
+        }
+        if (clientesExcluidosAlDia > 0) {
+            mensajes.push(`${clientesExcluidosAlDia} al día`);
+        }
+        html += mensajes.join(' • ');
+        html += `</div>`;
+    }
+
+    html += '<div style="border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden;">';
+
+    clientesParaEnviar.forEach((cliente, index) => {
+        const estadoPago = obtenerEstadoPago(cliente.fecha);
+        const clienteIndex = clientes.findIndex(c => c.id === cliente.id);
+
+        html += `
+            <div id="cliente-envio-${clienteIndex}" style="padding: 15px; border-bottom: 1px solid #f8f9fa; ${index % 2 === 0 ? 'background: #f8f9fa;' : 'background: white;'}">
+                <div style="display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: start;">
+                    <div style="font-weight: bold; color: #2581c4; font-size: 18px;">${index + 1}.</div>
+                    <div>
+                        <div style="font-weight: bold; color: #333; font-size: 16px; margin-bottom: 8px;">
+                            ${cliente.razonSocial}
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 14px; color: #666;">
+                            <div><strong>RUC:</strong> ${cliente.ruc}</div>
+                            <div><strong>WhatsApp:</strong> ${cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp}</div>
+                            <div><strong>Monto:</strong> S/ ${cliente.monto}</div>
+                            <div><strong>Vencimiento:</strong> ${formatearFecha(cliente.fecha)}</div>
+                            <div><strong>Servicio:</strong> ${cliente.tipo_servicio || 'Anual'}</div>
+                            <div><span class="estado ${estadoPago.clase.replace('client-item ', '')}">${estadoPago.texto}</span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <button onclick="excluirClienteEnvio(${clienteIndex})"
+                                class="btn btn-secondary"
+                                style="padding: 6px 12px; font-size: 12px; white-space: nowrap;"
+                                title="Excluir de este envío">
+                            🚫 Excluir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+
+    // Mostrar clientes excluidos manualmente (si los hay)
+    const clientesExcluidos = clientes.filter(c => c.excluidoEnvio);
+    if (clientesExcluidos.length > 0) {
+        html += `
+            <div style="margin-top: 20px; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden;">
+                <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #e9ecef; font-weight: bold; color: #666;">
+                    🚫 Clientes Excluidos Manualmente (${clientesExcluidos.length})
+                </div>
+        `;
+
+        clientesExcluidos.forEach((cliente, index) => {
+            const clienteIndex = clientes.findIndex(c => c.id === cliente.id);
+            const estadoPago = obtenerEstadoPago(cliente.fecha);
+
+            html += `
+                <div id="cliente-excluido-${clienteIndex}" style="padding: 12px; border-bottom: 1px solid #f8f9fa; background: #fff; opacity: 0.7;">
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start;">
+                        <div>
+                            <div style="font-weight: bold; color: #666; font-size: 14px; margin-bottom: 4px;">
+                                ${cliente.razonSocial}
+                            </div>
+                            <div style="font-size: 12px; color: #999;">
+                                RUC: ${cliente.ruc} • Vencimiento: ${formatearFecha(cliente.fecha)} • ${estadoPago.texto}
+                            </div>
+                            ${cliente.motivoExclusion ? `<div style="font-size: 12px; color: #666; margin-top: 4px; font-style: italic;">💬 ${cliente.motivoExclusion}</div>` : ''}
+                        </div>
+                        <div>
+                            <button onclick="incluirClienteEnvio(${clienteIndex})"
+                                    class="btn btn-success"
+                                    style="padding: 4px 10px; font-size: 11px;"
+                                    title="Volver a incluir en envío">
+                                ✅ Incluir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+    }
+
+    // Agregar resumen por estado (solo de los que se enviarán)
+    const resumen = obtenerResumenEstados(clientesParaEnviar);
+    html += `
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #2581c4;">
+            <h3 style="color: #2581c4; margin-bottom: 10px;">📊 Resumen de Envío</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #F28B82;">${resumen.vencidos}</div>
+                    <div style="font-size: 12px; color: #666;">Vencidos</div>
+                </div>
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #FFF176;">${resumen.proximosVencer}</div>
+                    <div style="font-size: 12px; color: #666;">Próximos a Vencer</div>
+                </div>
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #6c757d;">${clientesExcluidosManual}</div>
+                    <div style="font-size: 12px; color: #666;">Excluidos</div>
+                </div>
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #81C784;">${clientesExcluidosAlDia}</div>
+                    <div style="font-size: 12px; color: #666;">Al Día</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = html;
+    modal.style.display = 'flex';
+}
+
+function cerrarModalListaEnvio(event) {
+    // Si se hace clic en el overlay o se llama directamente
+    if (!event || event.target.id === 'modalListaEnvio') {
+        const modal = document.getElementById('modalListaEnvio');
+        modal.style.display = 'none';
+    }
+}
+
+function obtenerResumenEstados(listaClientes = clientes) {
+    let vencidos = 0;
+    let proximosVencer = 0;
+    let alDia = 0;
+
+    listaClientes.forEach(cliente => {
+        const estado = obtenerEstadoPago(cliente.fecha);
+        if (estado.clase.includes('vencido')) {
+            vencidos++;
+        } else if (estado.clase.includes('proximo-vencer')) {
+            proximosVencer++;
+        } else if (estado.clase.includes('al-dia')) {
+            alDia++;
+        }
+    });
+
+    return { vencidos, proximosVencer, alDia };
+}
+
+// Excluir cliente del envío
+function excluirClienteEnvio(index) {
+    const cliente = clientes[index];
+
+    const motivo = prompt(`¿Por qué desea excluir a "${cliente.razonSocial}" del envío?\n\nEjemplos:\n• Ya pagó\n• Confirmó que pagará mañana\n• Solicitó extensión\n\n(Opcional, puede dejar en blanco)`);
+
+    // Si cancela, no hacer nada
+    if (motivo === null) return;
+
+    // Marcar como excluido
+    clientes[index].excluidoEnvio = true;
+    clientes[index].motivoExclusion = motivo.trim() || 'Sin motivo especificado';
+    clientes[index].fechaExclusion = new Date().toISOString();
+
+    // Actualizar en base de datos si tiene ID
+    if (cliente.id) {
+        actualizarClienteEnDB(cliente);
+    }
+
+    // Refrescar el modal
+    mostrarListaEnvio();
+}
+
+// Incluir cliente de nuevo en el envío
+function incluirClienteEnvio(index) {
+    const cliente = clientes[index];
+
+    if (confirm(`¿Volver a incluir a "${cliente.razonSocial}" en el envío?`)) {
+        // Quitar marca de excluido
+        delete clientes[index].excluidoEnvio;
+        delete clientes[index].motivoExclusion;
+        delete clientes[index].fechaExclusion;
+
+        // Actualizar en base de datos si tiene ID
+        if (cliente.id) {
+            actualizarClienteEnDB(cliente);
+        }
+
+        // Refrescar el modal
+        mostrarListaEnvio();
     }
 }
