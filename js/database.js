@@ -260,17 +260,23 @@ async function verificarVencimientos() {
             // Procesar todos los tipos de vencimiento
             ['vencidos', 'vence_hoy', 'por_vencer'].forEach(tipo => {
                 resultado[tipo].forEach(cliente => {
-                    clientesNotificar.push({
-                        cliente: {
-                            id: cliente.id,
-                            ruc: cliente.ruc,
-                            razonSocial: cliente.razon_social,
-                            monto: cliente.monto,
-                            fecha: cliente.fecha_vencimiento,
-                            whatsapp: cliente.whatsapp
-                        },
-                        diasDiferencia: tipo === 'vence_hoy' ? 0 : cliente.dias_restantes
-                    });
+                    // Buscar el cliente en la lista global para verificar si está excluido
+                    const clienteLocal = clientes.find(c => c.id === cliente.id);
+
+                    // Solo agregar si no está excluido de notificaciones
+                    if (!clienteLocal || !clienteLocal.excluidoNotificaciones) {
+                        clientesNotificar.push({
+                            cliente: {
+                                id: cliente.id,
+                                ruc: cliente.ruc,
+                                razonSocial: cliente.razon_social,
+                                monto: cliente.monto,
+                                fecha: cliente.fecha_vencimiento,
+                                whatsapp: cliente.whatsapp
+                            },
+                            diasDiferencia: tipo === 'vence_hoy' ? 0 : cliente.dias_restantes
+                        });
+                    }
                 });
             });
 

@@ -748,7 +748,10 @@ require_once 'auth/session_check.php';
                 <button class="modal-close" onclick="cerrarModalExportar()">×</button>
             </div>
             <div class="modal-body">
-                <p style="color: #666; margin-bottom: 20px;">Seleccione el período que desea exportar:</p>
+                <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+                    <strong style="color: #1976d2;">💡 Tip:</strong>
+                    <span style="color: #666; font-size: 13px;">Puede exportar todos los pagos dejando ambas fechas vacías, o filtrar por un rango específico.</span>
+                </div>
 
                 <div class="form-group">
                     <label for="exportarTipoFecha">Filtrar por:</label>
@@ -759,32 +762,13 @@ require_once 'auth/session_check.php';
                 </div>
 
                 <div class="form-group">
-                    <label for="exportarMes">Mes:</label>
-                    <select id="exportarMes">
-                        <option value="">Todos los meses</option>
-                        <option value="1">Enero</option>
-                        <option value="2">Febrero</option>
-                        <option value="3">Marzo</option>
-                        <option value="4">Abril</option>
-                        <option value="5">Mayo</option>
-                        <option value="6">Junio</option>
-                        <option value="7">Julio</option>
-                        <option value="8">Agosto</option>
-                        <option value="9">Septiembre</option>
-                        <option value="10">Octubre</option>
-                        <option value="11">Noviembre</option>
-                        <option value="12">Diciembre</option>
-                    </select>
+                    <label for="exportarFechaDesde">Desde: <small style="color: #999; font-weight: normal;">(opcional)</small></label>
+                    <input type="date" id="exportarFechaDesde">
                 </div>
 
                 <div class="form-group">
-                    <label for="exportarAnio">Año:</label>
-                    <select id="exportarAnio">
-                        <option value="">Todos los años</option>
-                        <option value="2025">2025</option>
-                        <option value="2024">2024</option>
-                        <option value="2023">2023</option>
-                    </select>
+                    <label for="exportarFechaHasta">Hasta: <small style="color: #999; font-weight: normal;">(opcional)</small></label>
+                    <input type="date" id="exportarFechaHasta">
                 </div>
 
                 <div class="form-actions">

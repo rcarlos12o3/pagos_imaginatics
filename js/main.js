@@ -552,14 +552,29 @@ function mostrarResultadosVencimientos(resultado) {
 
         resultado.vencidos.forEach((cliente, index) => {
             const diasAtraso = Math.abs(cliente.dias_restantes);
+            const clienteIndex = clientes.findIndex(c => c.id === cliente.id);
+            const clienteLocal = clientes[clienteIndex];
+            const estaExcluido = clienteLocal && clienteLocal.excluidoNotificaciones;
+
             html += `
                 <div style="padding: 12px; border-bottom: 1px solid #f8f9fa; ${index % 2 === 0 ? 'background: #fff5f5;' : 'background: white;'}">
-                    <div style="font-weight: bold; color: #c92a2a; margin-bottom: 4px;">${cliente.razon_social}</div>
-                    <div style="font-size: 13px; color: #666;">
-                        RUC: ${cliente.ruc} •
-                        WhatsApp: ${cliente.whatsapp ? (cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp) : 'No registrado'} •
-                        Monto: S/ ${cliente.monto} •
-                        <strong style="color: #c92a2a;">${diasAtraso} día${diasAtraso !== 1 ? 's' : ''} de atraso</strong>
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start;">
+                        <div>
+                            <div style="font-weight: bold; color: #c92a2a; margin-bottom: 4px;">${cliente.razon_social}</div>
+                            <div style="font-size: 13px; color: #666;">
+                                RUC: ${cliente.ruc} •
+                                WhatsApp: ${cliente.whatsapp ? (cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp) : 'No registrado'} •
+                                Monto: S/ ${cliente.monto} •
+                                <strong style="color: #c92a2a;">${diasAtraso} día${diasAtraso !== 1 ? 's' : ''} de atraso</strong>
+                            </div>
+                            ${estaExcluido && clienteLocal.motivoExclusionNotif ? `<div style="font-size: 11px; color: #856404; margin-top: 4px; font-style: italic; background: #fff3cd; padding: 4px 8px; border-radius: 4px;">💬 ${clienteLocal.motivoExclusionNotif}</div>` : ''}
+                        </div>
+                        <div>
+                            ${!estaExcluido ?
+                                `<button onclick="excluirClienteNotificaciones(${clienteIndex})" class="btn btn-warning" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;" title="Excluir de notificaciones">🔕 Excluir</button>` :
+                                `<button onclick="incluirClienteNotificaciones(${clienteIndex})" class="btn btn-success" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;" title="Incluir en notificaciones">✅ Incluir</button>`
+                            }
+                        </div>
                     </div>
                 </div>
             `;
@@ -579,14 +594,29 @@ function mostrarResultadosVencimientos(resultado) {
         `;
 
         resultado.vence_hoy.forEach((cliente, index) => {
+            const clienteIndex = clientes.findIndex(c => c.id === cliente.id);
+            const clienteLocal = clientes[clienteIndex];
+            const estaExcluido = clienteLocal && clienteLocal.excluidoNotificaciones;
+
             html += `
                 <div style="padding: 12px; border-bottom: 1px solid #f8f9fa; ${index % 2 === 0 ? 'background: #fff4e6;' : 'background: white;'}">
-                    <div style="font-weight: bold; color: #d9480f; margin-bottom: 4px;">${cliente.razon_social}</div>
-                    <div style="font-size: 13px; color: #666;">
-                        RUC: ${cliente.ruc} •
-                        WhatsApp: ${cliente.whatsapp ? (cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp) : 'No registrado'} •
-                        Monto: S/ ${cliente.monto} •
-                        <strong style="color: #d9480f;">ÚLTIMO DÍA</strong>
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start;">
+                        <div>
+                            <div style="font-weight: bold; color: #d9480f; margin-bottom: 4px;">${cliente.razon_social}</div>
+                            <div style="font-size: 13px; color: #666;">
+                                RUC: ${cliente.ruc} •
+                                WhatsApp: ${cliente.whatsapp ? (cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp) : 'No registrado'} •
+                                Monto: S/ ${cliente.monto} •
+                                <strong style="color: #d9480f;">ÚLTIMO DÍA</strong>
+                            </div>
+                            ${estaExcluido && clienteLocal.motivoExclusionNotif ? `<div style="font-size: 11px; color: #856404; margin-top: 4px; font-style: italic; background: #fff3cd; padding: 4px 8px; border-radius: 4px;">💬 ${clienteLocal.motivoExclusionNotif}</div>` : ''}
+                        </div>
+                        <div>
+                            ${!estaExcluido ?
+                                `<button onclick="excluirClienteNotificaciones(${clienteIndex})" class="btn btn-warning" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;" title="Excluir de notificaciones">🔕 Excluir</button>` :
+                                `<button onclick="incluirClienteNotificaciones(${clienteIndex})" class="btn btn-success" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;" title="Incluir en notificaciones">✅ Incluir</button>`
+                            }
+                        </div>
                     </div>
                 </div>
             `;
@@ -606,14 +636,29 @@ function mostrarResultadosVencimientos(resultado) {
         `;
 
         resultado.por_vencer.forEach((cliente, index) => {
+            const clienteIndex = clientes.findIndex(c => c.id === cliente.id);
+            const clienteLocal = clientes[clienteIndex];
+            const estaExcluido = clienteLocal && clienteLocal.excluidoNotificaciones;
+
             html += `
                 <div style="padding: 12px; border-bottom: 1px solid #f8f9fa; ${index % 2 === 0 ? 'background: #fffae6;' : 'background: white;'}">
-                    <div style="font-weight: bold; color: #e67700; margin-bottom: 4px;">${cliente.razon_social}</div>
-                    <div style="font-size: 13px; color: #666;">
-                        RUC: ${cliente.ruc} •
-                        WhatsApp: ${cliente.whatsapp ? (cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp) : 'No registrado'} •
-                        Monto: S/ ${cliente.monto} •
-                        <strong style="color: #e67700;">${cliente.dias_restantes} día${cliente.dias_restantes !== 1 ? 's' : ''} restantes</strong>
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start;">
+                        <div>
+                            <div style="font-weight: bold; color: #e67700; margin-bottom: 4px;">${cliente.razon_social}</div>
+                            <div style="font-size: 13px; color: #666;">
+                                RUC: ${cliente.ruc} •
+                                WhatsApp: ${cliente.whatsapp ? (cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp) : 'No registrado'} •
+                                Monto: S/ ${cliente.monto} •
+                                <strong style="color: #e67700;">${cliente.dias_restantes} día${cliente.dias_restantes !== 1 ? 's' : ''} restantes</strong>
+                            </div>
+                            ${estaExcluido && clienteLocal.motivoExclusionNotif ? `<div style="font-size: 11px; color: #856404; margin-top: 4px; font-style: italic; background: #fff3cd; padding: 4px 8px; border-radius: 4px;">💬 ${clienteLocal.motivoExclusionNotif}</div>` : ''}
+                        </div>
+                        <div>
+                            ${!estaExcluido ?
+                                `<button onclick="excluirClienteNotificaciones(${clienteIndex})" class="btn btn-warning" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;" title="Excluir de notificaciones">🔕 Excluir</button>` :
+                                `<button onclick="incluirClienteNotificaciones(${clienteIndex})" class="btn btn-success" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;" title="Incluir en notificaciones">✅ Incluir</button>`
+                            }
+                        </div>
                     </div>
                 </div>
             `;
@@ -902,12 +947,19 @@ function mostrarListaEnvio() {
                             <div><span class="estado ${estadoPago.clase.replace('client-item ', '')}">${estadoPago.texto}</span></div>
                         </div>
                     </div>
-                    <div>
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
                         <button onclick="excluirClienteEnvio(${clienteIndex})"
                                 class="btn btn-secondary"
-                                style="padding: 6px 12px; font-size: 12px; white-space: nowrap;"
-                                title="Excluir de este envío">
-                            🚫 Excluir
+                                style="padding: 6px 12px; font-size: 11px; white-space: nowrap;"
+                                title="Excluir del envío en lote">
+                            🚫 Excluir Envío
+                        </button>
+                        <button onclick="excluirClienteNotificaciones(${clienteIndex})"
+                                class="btn btn-warning"
+                                style="padding: 6px 12px; font-size: 11px; white-space: nowrap; ${cliente.excluidoNotificaciones ? 'opacity: 0.5;' : ''}"
+                                title="Excluir de notificaciones de vencimiento"
+                                ${cliente.excluidoNotificaciones ? 'disabled' : ''}>
+                            🔕 Excluir Notif.
                         </button>
                     </div>
                 </div>
@@ -959,8 +1011,51 @@ function mostrarListaEnvio() {
         html += '</div>';
     }
 
+    // Mostrar clientes excluidos de notificaciones (si los hay)
+    const clientesExcluidosNotif = clientes.filter(c => c.excluidoNotificaciones);
+    if (clientesExcluidosNotif.length > 0) {
+        html += `
+            <div style="margin-top: 20px; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden;">
+                <div style="background: #fff3cd; padding: 12px; border-bottom: 1px solid #e9ecef; font-weight: bold; color: #856404;">
+                    🔕 Clientes Excluidos de Notificaciones (${clientesExcluidosNotif.length})
+                </div>
+        `;
+
+        clientesExcluidosNotif.forEach((cliente, index) => {
+            const clienteIndex = clientes.findIndex(c => c.id === cliente.id);
+            const estadoPago = obtenerEstadoPago(cliente.fecha);
+
+            html += `
+                <div id="cliente-excluido-notif-${clienteIndex}" style="padding: 12px; border-bottom: 1px solid #f8f9fa; background: #fffbf0; opacity: 0.8;">
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start;">
+                        <div>
+                            <div style="font-weight: bold; color: #856404; font-size: 14px; margin-bottom: 4px;">
+                                ${cliente.razonSocial}
+                            </div>
+                            <div style="font-size: 12px; color: #999;">
+                                RUC: ${cliente.ruc} • Vencimiento: ${formatearFecha(cliente.fecha)} • ${estadoPago.texto}
+                            </div>
+                            ${cliente.motivoExclusionNotif ? `<div style="font-size: 12px; color: #856404; margin-top: 4px; font-style: italic;">💬 ${cliente.motivoExclusionNotif}</div>` : ''}
+                        </div>
+                        <div>
+                            <button onclick="incluirClienteNotificaciones(${clienteIndex})"
+                                    class="btn btn-success"
+                                    style="padding: 4px 10px; font-size: 11px;"
+                                    title="Volver a incluir en notificaciones">
+                                ✅ Incluir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+    }
+
     // Agregar resumen por estado (solo de los que se enviarán)
     const resumen = obtenerResumenEstados(clientesParaEnviar);
+    const clientesExcluidosNotifCount = clientesExcluidosNotif.length;
     html += `
         <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #2581c4;">
             <h3 style="color: #2581c4; margin-bottom: 10px;">📊 Resumen de Envío</h3>
@@ -975,7 +1070,11 @@ function mostrarListaEnvio() {
                 </div>
                 <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
                     <div style="font-size: 24px; font-weight: bold; color: #6c757d;">${clientesExcluidosManual}</div>
-                    <div style="font-size: 12px; color: #666;">Excluidos</div>
+                    <div style="font-size: 12px; color: #666;">Excluidos Envío</div>
+                </div>
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #ffc107;">${clientesExcluidosNotifCount}</div>
+                    <div style="font-size: 12px; color: #666;">Excluidos Notif.</div>
                 </div>
                 <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
                     <div style="font-size: 24px; font-weight: bold; color: #81C784;">${clientesExcluidosAlDia}</div>
@@ -1051,5 +1150,63 @@ function incluirClienteEnvio(index) {
 
         // Refrescar el modal
         mostrarListaEnvio();
+    }
+}
+
+// Excluir cliente de notificaciones de vencimiento
+function excluirClienteNotificaciones(index) {
+    const cliente = clientes[index];
+
+    const motivo = prompt(`¿Por qué desea excluir a "${cliente.razonSocial}" de las notificaciones de vencimiento?\n\nEjemplos:\n• Ya pagó\n• Confirmó que pagará mañana\n• Solicitó extensión\n\n(Opcional, puede dejar en blanco)`);
+
+    // Si cancela, no hacer nada
+    if (motivo === null) return;
+
+    // Marcar como excluido de notificaciones
+    clientes[index].excluidoNotificaciones = true;
+    clientes[index].motivoExclusionNotif = motivo.trim() || 'Sin motivo especificado';
+    clientes[index].fechaExclusionNotif = new Date().toISOString();
+
+    // Refrescar ambos modales si están abiertos
+    const modalEnvio = document.getElementById('modalListaEnvio');
+    const modalVencimientos = document.getElementById('modalVencimientos');
+
+    if (modalEnvio && modalEnvio.style.display === 'flex') {
+        mostrarListaEnvio();
+    }
+
+    if (modalVencimientos && modalVencimientos.style.display === 'flex') {
+        // Volver a verificar vencimientos para actualizar la vista
+        verificarVencimientos();
+    }
+}
+
+// Incluir cliente de nuevo en las notificaciones
+function incluirClienteNotificaciones(index) {
+    const cliente = clientes[index];
+
+    if (confirm(`¿Volver a incluir a "${cliente.razonSocial}" en las notificaciones?`)) {
+        // Quitar marca de excluido
+        delete clientes[index].excluidoNotificaciones;
+        delete clientes[index].motivoExclusionNotif;
+        delete clientes[index].fechaExclusionNotif;
+
+        // Actualizar en base de datos si tiene ID
+        if (cliente.id) {
+            actualizarClienteEnDB(cliente);
+        }
+
+        // Refrescar ambos modales si están abiertos
+        const modalEnvio = document.getElementById('modalListaEnvio');
+        const modalVencimientos = document.getElementById('modalVencimientos');
+
+        if (modalEnvio && modalEnvio.style.display === 'flex') {
+            mostrarListaEnvio();
+        }
+
+        if (modalVencimientos && modalVencimientos.style.display === 'flex') {
+            // Volver a verificar vencimientos para actualizar la vista
+            verificarVencimientos();
+        }
     }
 }

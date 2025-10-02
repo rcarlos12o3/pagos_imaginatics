@@ -515,13 +515,9 @@ async function eliminarPago(id) {
  * Abrir modal de exportación
  */
 function exportarPagos() {
-    // Establecer mes y año actual por defecto
-    const fechaActual = new Date();
-    const mesActual = fechaActual.getMonth() + 1;
-    const anioActual = fechaActual.getFullYear();
-
-    document.getElementById('exportarMes').value = mesActual;
-    document.getElementById('exportarAnio').value = anioActual;
+    // Limpiar fechas previas
+    document.getElementById('exportarFechaDesde').value = '';
+    document.getElementById('exportarFechaHasta').value = '';
 
     document.getElementById('modalExportar').classList.add('active');
 }
@@ -538,36 +534,40 @@ function cerrarModalExportar() {
  */
 async function confirmarExportacion() {
     try {
-        const meses = [
-            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-        ];
-
         const tipoFecha = document.getElementById('exportarTipoFecha').value;
-        const mesSeleccionado = document.getElementById('exportarMes').value;
-        const anioSeleccionado = document.getElementById('exportarAnio').value;
+        const fechaDesde = document.getElementById('exportarFechaDesde').value;
+        const fechaHasta = document.getElementById('exportarFechaHasta').value;
 
-        let mes = mesSeleccionado ? parseInt(mesSeleccionado) : null;
-        let anio = anioSeleccionado ? parseInt(anioSeleccionado) : null;
+        // Cargar TODOS los pagos sin filtros para la exportación
+        console.log('🔍 Cargando todos los pagos para exportar...');
+        const response = await fetch(`${API_PAGOS}?action=list&limit=10000`);
+        const data = await response.json();
 
-        // Filtrar pagos según mes y año seleccionados
-        let pagosFiltrados = pagosDataFiltrada;
+        if (!data.success) {
+            throw new Error(data.error || 'Error al cargar pagos para exportar');
+        }
 
-        if (mes || anio) {
-            pagosFiltrados = pagosDataFiltrada.filter(pago => {
-                // Usar la fecha según el tipo seleccionado
-                const fecha = tipoFecha === 'vencimiento'
-                    ? new Date(pago.fecha_vencimiento)
-                    : new Date(pago.fecha_pago);
+        let todosPagos = data.data;
+        console.log(`📊 Total de pagos cargados: ${todosPagos.length}`);
 
-                const mesFecha = fecha.getMonth() + 1;
-                const anioFecha = fecha.getFullYear();
+        // Filtrar pagos según rango de fechas
+        let pagosFiltrados = todosPagos;
 
-                let cumpleMes = mes ? mesFecha === mes : true;
-                let cumpleAnio = anio ? anioFecha === anio : true;
+        if (fechaDesde || fechaHasta) {
+            console.log(`🔎 Filtrando por rango: ${fechaDesde || 'inicio'} - ${fechaHasta || 'fin'}, tipo: ${tipoFecha}`);
+            pagosFiltrados = todosPagos.filter(pago => {
+                // Usar la fecha según el tipo seleccionado (formato: YYYY-MM-DD)
+                const fechaStr = tipoFecha === 'vencimiento'
+                    ? pago.fecha_vencimiento
+                    : pago.fecha_pago;
 
-                return cumpleMes && cumpleAnio;
+                // Comparar fechas como strings (YYYY-MM-DD se compara correctamente)
+                let cumpleDesde = fechaDesde ? fechaStr >= fechaDesde : true;
+                let cumpleHasta = fechaHasta ? fechaStr <= fechaHasta : true;
+
+                return cumpleDesde && cumpleHasta;
             });
+            console.log(`✅ Pagos después del filtro: ${pagosFiltrados.length}`);
         }
 
         if (pagosFiltrados.length === 0) {
@@ -591,11 +591,17 @@ async function confirmarExportacion() {
         // Convertir a CSV
         const csv = convertirACSV(datosExportar);
 
-        // Construir nombre de archivo con mes/año si aplica
+        // Construir nombre de archivo con rango de fechas
         let nombreArchivo = 'pagos';
-        if (mes) nombreArchivo += `_${meses[mes - 1]}`;
-        if (anio) nombreArchivo += `_${anio}`;
-        if (!mes && !anio) nombreArchivo += `_${formatearFechaISO()}`;
+        if (fechaDesde && fechaHasta) {
+            nombreArchivo += `_${fechaDesde}_a_${fechaHasta}`;
+        } else if (fechaDesde) {
+            nombreArchivo += `_desde_${fechaDesde}`;
+        } else if (fechaHasta) {
+            nombreArchivo += `_hasta_${fechaHasta}`;
+        } else {
+            nombreArchivo += `_todos_${formatearFechaISO()}`;
+        }
         nombreArchivo += '.csv';
 
         // Descargar archivo
