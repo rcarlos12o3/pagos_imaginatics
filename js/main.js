@@ -1127,7 +1127,7 @@ async function mostrarListaEnvio() {
                     <div style="font-size: 12px; color: #666;">Excluidos Notif.</div>
                 </div>
                 <div style="text-align: center; padding: 10px; background: white; border-radius: 5px;">
-                    <div style="font-size: 24px; font-weight: bold; color: #81C784;">${clientesExcluidosAlDia}</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #81C784;">${clientesAlDia}</div>
                     <div style="font-size: 12px; color: #666;">Al Día</div>
                 </div>
             </div>
