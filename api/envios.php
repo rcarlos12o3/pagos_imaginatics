@@ -49,6 +49,9 @@ function handleGet($database) {
         case 'history':
             getHistorialCliente($database, $_GET['cliente_id'] ?? null);
             break;
+        case 'enviados_mes_actual':
+            getEnviadosMesActual($database);
+            break;
         default:
             jsonResponse(['success' => false, 'error' => 'Acción no válida'], 400);
     }
@@ -158,6 +161,32 @@ function getHistorialCliente($database, $clienteId) {
         );
 
         jsonResponse(['success' => true, 'data' => $envios]);
+
+    } catch (Exception $e) {
+        throw $e;
+    }
+}
+
+/**
+ * Obtener clientes que ya recibieron orden de pago este mes
+ */
+function getEnviadosMesActual($database) {
+    try {
+        $sql = "SELECT DISTINCT cliente_id, MAX(fecha_envio) as ultima_fecha
+                FROM envios_whatsapp
+                WHERE tipo_envio = 'orden_pago'
+                AND estado = 'enviado'
+                AND YEAR(fecha_envio) = YEAR(CURDATE())
+                AND MONTH(fecha_envio) = MONTH(CURDATE())
+                GROUP BY cliente_id";
+
+        $envios = $database->fetchAll($sql);
+
+        jsonResponse([
+            'success' => true,
+            'data' => $envios,
+            'total' => count($envios)
+        ]);
 
     } catch (Exception $e) {
         throw $e;

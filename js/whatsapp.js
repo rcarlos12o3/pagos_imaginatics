@@ -48,10 +48,27 @@ async function enviarLote() {
         return;
     }
 
-    // Filtrar solo clientes que necesitan orden de pago (vencidos o próximos a vencer) y no excluidos
+    // Obtener lista de clientes que ya recibieron orden de pago este mes
+    let clientesYaEnviados = [];
+    try {
+        const response = await fetch(API_ENVIOS_BASE + '?action=enviados_mes_actual');
+        const data = await response.json();
+        if (data.success) {
+            clientesYaEnviados = data.data.map(e => e.cliente_id);
+        }
+    } catch (error) {
+        console.error('Error obteniendo envíos del mes:', error);
+    }
+
+    // Filtrar solo clientes que necesitan orden de pago (próximos a vencer, no vencidos) y no excluidos
     const clientesParaEnviar = clientes.filter(cliente => {
         // Verificar si está excluido manualmente
         if (cliente.excluidoEnvio) {
+            return false;
+        }
+
+        // Verificar si ya se envió este mes
+        if (clientesYaEnviados.includes(cliente.id)) {
             return false;
         }
 
@@ -61,16 +78,29 @@ async function enviarLote() {
         fecha.setHours(0, 0, 0, 0);
         const diferenciaDias = Math.floor((fecha - hoy) / (1000 * 60 * 60 * 24));
 
-        // Solo enviar si está vencido o vence en los próximos 7 días
-        return diferenciaDias <= 7;
+        // Solo enviar si vence HOY o en los próximos 7 días (NO enviar si ya está vencido)
+        return diferenciaDias >= 0 && diferenciaDias <= 7;
     });
 
     const clientesExcluidos = clientes.filter(c => c.excluidoEnvio).length;
+    const clientesYaEnviadosMes = clientes.filter(c => clientesYaEnviados.includes(c.id)).length;
 
     if (clientesParaEnviar.length === 0) {
-        const mensaje = clientesExcluidos > 0
-            ? `❌ No hay clientes disponibles para envío.\n\n• ${clientesExcluidos} excluido${clientesExcluidos !== 1 ? 's' : ''} manualmente`
-            : '❌ No hay clientes con pagos vencidos o próximos a vencer.\n\nLas órdenes de pago solo se envían a clientes que:\n• Tienen pagos vencidos\n• Vencen en los próximos 7 días';
+        let mensaje = '❌ No hay clientes disponibles para envío.\n\n';
+
+        if (clientesExcluidos > 0) {
+            mensaje += `• ${clientesExcluidos} excluido${clientesExcluidos !== 1 ? 's' : ''} manualmente\n`;
+        }
+
+        if (clientesYaEnviadosMes > 0) {
+            mensaje += `• ${clientesYaEnviadosMes} ya recibió orden de pago este mes\n`;
+        }
+
+        mensaje += '\nLas órdenes de pago solo se envían a clientes que:\n';
+        mensaje += '• Vencen HOY o en los próximos 7 días\n';
+        mensaje += '• NO han recibido orden de pago este mes\n';
+        mensaje += '• NO están vencidos (para vencidos use Recordatorios)';
+
         alert(mensaje);
         return;
     }

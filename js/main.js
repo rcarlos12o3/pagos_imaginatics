@@ -858,16 +858,33 @@ async function logout() {
 // MODAL DE LISTA DE ENVÍO
 // ============================================
 
-function mostrarListaEnvio() {
+async function mostrarListaEnvio() {
     if (clientes.length === 0) {
         alert('No hay clientes en la lista para enviar');
         return;
     }
 
-    // Filtrar solo clientes que necesitan orden de pago (vencidos o próximos a vencer)
+    // Obtener lista de clientes que ya recibieron orden de pago este mes
+    let clientesYaEnviados = [];
+    try {
+        const response = await fetch(API_ENVIOS_BASE + '?action=enviados_mes_actual');
+        const data = await response.json();
+        if (data.success) {
+            clientesYaEnviados = data.data.map(e => e.cliente_id);
+        }
+    } catch (error) {
+        console.error('Error obteniendo envíos del mes:', error);
+    }
+
+    // Filtrar solo clientes que necesitan orden de pago (próximos a vencer, no vencidos)
     const clientesParaEnviar = clientes.filter(cliente => {
         // Verificar si está excluido manualmente
         if (cliente.excluidoEnvio) {
+            return false;
+        }
+
+        // Verificar si ya se envió este mes
+        if (clientesYaEnviados.includes(cliente.id)) {
             return false;
         }
 
@@ -877,13 +894,23 @@ function mostrarListaEnvio() {
         fecha.setHours(0, 0, 0, 0);
         const diferenciaDias = Math.floor((fecha - hoy) / (1000 * 60 * 60 * 24));
 
-        // Solo mostrar si está vencido o vence en los próximos 7 días
-        return diferenciaDias <= 7;
+        // Solo mostrar si vence HOY o en los próximos 7 días (NO vencidos)
+        return diferenciaDias >= 0 && diferenciaDias <= 7;
     });
 
-    // Contar excluidos manualmente
+    // Contar excluidos
     const clientesExcluidosManual = clientes.filter(c => c.excluidoEnvio).length;
-    const clientesExcluidosAlDia = clientes.filter(c => {
+    const clientesYaEnviadosMes = clientes.filter(c => clientesYaEnviados.includes(c.id)).length;
+    const clientesVencidos = clientes.filter(c => {
+        if (c.excluidoEnvio) return false;
+        const hoy = obtenerFechaPeru();
+        const fecha = new Date(c.fecha);
+        hoy.setHours(0, 0, 0, 0);
+        fecha.setHours(0, 0, 0, 0);
+        const diferenciaDias = Math.floor((fecha - hoy) / (1000 * 60 * 60 * 24));
+        return diferenciaDias < 0;
+    }).length;
+    const clientesAlDia = clientes.filter(c => {
         if (c.excluidoEnvio) return false;
         const hoy = obtenerFechaPeru();
         const fecha = new Date(c.fecha);
@@ -894,9 +921,26 @@ function mostrarListaEnvio() {
     }).length;
 
     if (clientesParaEnviar.length === 0) {
-        const mensaje = clientesExcluidosManual > 0
-            ? `❌ No hay clientes disponibles para envío.\n\n• ${clientesExcluidosManual} excluido${clientesExcluidosManual !== 1 ? 's' : ''} manualmente\n• ${clientesExcluidosAlDia} al día (vencen en más de 7 días)`
-            : '❌ No hay clientes con pagos vencidos o próximos a vencer.\n\nLas órdenes de pago solo se envían a clientes que:\n• Tienen pagos vencidos\n• Vencen en los próximos 7 días';
+        let mensaje = '❌ No hay clientes disponibles para envío.\n\n';
+
+        if (clientesExcluidosManual > 0) {
+            mensaje += `• ${clientesExcluidosManual} excluido${clientesExcluidosManual !== 1 ? 's' : ''} manualmente\n`;
+        }
+        if (clientesYaEnviadosMes > 0) {
+            mensaje += `• ${clientesYaEnviadosMes} ya recibió orden de pago este mes\n`;
+        }
+        if (clientesVencidos > 0) {
+            mensaje += `• ${clientesVencidos} vencido${clientesVencidos !== 1 ? 's' : ''} (use Recordatorios)\n`;
+        }
+        if (clientesAlDia > 0) {
+            mensaje += `• ${clientesAlDia} al día (vencen en más de 7 días)\n`;
+        }
+
+        mensaje += '\nLas órdenes de pago solo se envían a clientes que:\n';
+        mensaje += '• Vencen HOY o en los próximos 7 días\n';
+        mensaje += '• NO han recibido orden de pago este mes\n';
+        mensaje += '• NO están vencidos';
+
         alert(mensaje);
         return;
     }
@@ -910,15 +954,21 @@ function mostrarListaEnvio() {
 
     // Mensaje informativo si hay clientes excluidos
     let html = '';
-    if (clientesExcluidosManual > 0 || clientesExcluidosAlDia > 0) {
+    if (clientesExcluidosManual > 0 || clientesYaEnviadosMes > 0 || clientesVencidos > 0 || clientesAlDia > 0) {
         html += `<div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin-bottom: 15px; border-left: 4px solid #ffc107;">`;
         html += `<strong>ℹ️ Información:</strong> `;
         const mensajes = [];
         if (clientesExcluidosManual > 0) {
             mensajes.push(`${clientesExcluidosManual} excluido${clientesExcluidosManual !== 1 ? 's' : ''} manualmente`);
         }
-        if (clientesExcluidosAlDia > 0) {
-            mensajes.push(`${clientesExcluidosAlDia} al día`);
+        if (clientesYaEnviadosMes > 0) {
+            mensajes.push(`${clientesYaEnviadosMes} ya enviado${clientesYaEnviadosMes !== 1 ? 's' : ''} este mes`);
+        }
+        if (clientesVencidos > 0) {
+            mensajes.push(`${clientesVencidos} vencido${clientesVencidos !== 1 ? 's' : ''}`);
+        }
+        if (clientesAlDia > 0) {
+            mensajes.push(`${clientesAlDia} al día`);
         }
         html += mensajes.join(' • ');
         html += `</div>`;
