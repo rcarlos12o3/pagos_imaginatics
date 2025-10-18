@@ -203,7 +203,7 @@ function actualizarListaClientes(clientesFiltrados = null) {
 
     lista.innerHTML = clientesAMostrar.map((cliente, index) => {
         const indexOriginal = clientes.indexOf(cliente);
-        const estadoPago = obtenerEstadoPago(cliente.fecha);
+        const estadoPago = obtenerEstadoPago(cliente.fecha, cliente.tipo_servicio);
         return `
         <div class="client-item ${estadoPago.clase}" onclick="seleccionarCliente(${indexOriginal})" data-index="${indexOriginal}">
             <div class="client-name">${cliente.razonSocial}</div>
@@ -703,7 +703,7 @@ function cerrarModalVencimientos(event) {
 // FUNCIONES DE UI - ESTADO DE PAGOS
 // ============================================
 
-function obtenerEstadoPago(fechaVencimiento) {
+function obtenerEstadoPago(fechaVencimiento, tipoServicio = 'anual') {
     const hoy = obtenerFechaPeru();
     const fecha = new Date(fechaVencimiento);
 
@@ -712,6 +712,10 @@ function obtenerEstadoPago(fechaVencimiento) {
     fecha.setHours(0, 0, 0, 0);
 
     const diferenciaDias = Math.floor((fecha - hoy) / (1000 * 60 * 60 * 24));
+
+    // Determinar días de anticipación según tipo de servicio
+    const tipo = (tipoServicio || 'anual').toLowerCase();
+    const diasAnticipacion = tipo === 'anual' ? 30 : 7;
 
     if (diferenciaDias < 0) {
         return {
@@ -725,7 +729,7 @@ function obtenerEstadoPago(fechaVencimiento) {
             estado: 'vence_hoy',
             texto: 'VENCE HOY'
         };
-    } else if (diferenciaDias <= 7) {
+    } else if (diferenciaDias <= diasAnticipacion) {
         return {
             clase: 'proximo-vencer',
             estado: 'proximo_vencer',
@@ -977,7 +981,7 @@ async function mostrarListaEnvio() {
     html += '<div style="border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden;">';
 
     clientesParaEnviar.forEach((cliente, index) => {
-        const estadoPago = obtenerEstadoPago(cliente.fecha);
+        const estadoPago = obtenerEstadoPago(cliente.fecha, cliente.tipo_servicio);
         const clienteIndex = clientes.findIndex(c => c.id === cliente.id);
 
         html += `
@@ -1031,7 +1035,7 @@ async function mostrarListaEnvio() {
 
         clientesExcluidos.forEach((cliente, index) => {
             const clienteIndex = clientes.findIndex(c => c.id === cliente.id);
-            const estadoPago = obtenerEstadoPago(cliente.fecha);
+            const estadoPago = obtenerEstadoPago(cliente.fecha, cliente.tipo_servicio);
 
             html += `
                 <div id="cliente-excluido-${clienteIndex}" style="padding: 12px; border-bottom: 1px solid #f8f9fa; background: #fff; opacity: 0.7;">
@@ -1073,7 +1077,7 @@ async function mostrarListaEnvio() {
 
         clientesExcluidosNotif.forEach((cliente, index) => {
             const clienteIndex = clientes.findIndex(c => c.id === cliente.id);
-            const estadoPago = obtenerEstadoPago(cliente.fecha);
+            const estadoPago = obtenerEstadoPago(cliente.fecha, cliente.tipo_servicio);
 
             html += `
                 <div id="cliente-excluido-notif-${clienteIndex}" style="padding: 12px; border-bottom: 1px solid #f8f9fa; background: #fffbf0; opacity: 0.8;">
@@ -1152,7 +1156,7 @@ function obtenerResumenEstados(listaClientes = clientes) {
     let alDia = 0;
 
     listaClientes.forEach(cliente => {
-        const estado = obtenerEstadoPago(cliente.fecha);
+        const estado = obtenerEstadoPago(cliente.fecha, cliente.tipo_servicio);
         if (estado.clase.includes('vencido')) {
             vencidos++;
         } else if (estado.clase.includes('proximo-vencer')) {
