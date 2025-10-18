@@ -78,8 +78,14 @@ async function enviarLote() {
         fecha.setHours(0, 0, 0, 0);
         const diferenciaDias = Math.floor((fecha - hoy) / (1000 * 60 * 60 * 24));
 
-        // Solo enviar si vence HOY o en los próximos 7 días (NO enviar si ya está vencido)
-        return diferenciaDias >= 0 && diferenciaDias <= 7;
+        // Determinar días de anticipación según tipo de servicio
+        // Pagos anuales: 30 días de anticipación
+        // Otros tipos: 7 días de anticipación
+        const tipoServicio = (cliente.tipo_servicio || 'anual').toLowerCase();
+        const diasAnticipacion = tipoServicio === 'anual' ? 30 : 7;
+
+        // Solo enviar si vence HOY o en los próximos N días (NO enviar si ya está vencido)
+        return diferenciaDias >= 0 && diferenciaDias <= diasAnticipacion;
     });
 
     const clientesExcluidos = clientes.filter(c => c.excluidoEnvio).length;
@@ -97,7 +103,7 @@ async function enviarLote() {
         }
 
         mensaje += '\nLas órdenes de pago solo se envían a clientes que:\n';
-        mensaje += '• Vencen HOY o en los próximos 7 días\n';
+        mensaje += '• Vencen HOY o en los próximos días (30 días para anuales, 7 días para otros)\n';
         mensaje += '• NO han recibido orden de pago este mes\n';
         mensaje += '• NO están vencidos (para vencidos use Recordatorios)';
 
@@ -633,20 +639,20 @@ async function enviarTextoWhatsApp(cliente, mensaje) {
 // Generar mensaje de orden de pago
 function generarMensajeOrdenPago(cliente) {
     // Normalizamos el tipo de servicio (quitamos espacios y pasamos a minúsculas)
-    let tipo = (cliente.tipo_servicio || '').toLowerCase().trim();
+    let tipo = (cliente.tipo_servicio || 'anual').toLowerCase().trim();
     // Determinar el texto según el tipo de servicio
     let periodoTexto;
-    switch (cliente.tipo_servicio) {
-        case 'Mensual':
+    switch (tipo) {
+        case 'mensual':
             periodoTexto = 'un mes más trabajando juntos';
             break;
-        case 'Trimestral':
+        case 'trimestral':
             periodoTexto = 'un trimestre más trabajando juntos';
             break;
-        case 'Semestral':
+        case 'semestral':
             periodoTexto = 'un semestre más trabajando juntos';
             break;
-        case 'Anual':
+        case 'anual':
             periodoTexto = 'un año más trabajando juntos';
             break;
         default:
