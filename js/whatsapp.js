@@ -80,9 +80,17 @@ async function enviarLote() {
 
         // Determinar días de anticipación según tipo de servicio
         // Pagos anuales: 30 días de anticipación
-        // Otros tipos: 7 días de anticipación
+        // Pagos trimestrales y semestrales: 15 días de anticipación
+        // Pagos mensuales: 7 días de anticipación
         const tipoServicio = (cliente.tipo_servicio || 'anual').toLowerCase();
-        const diasAnticipacion = tipoServicio === 'anual' ? 30 : 7;
+        let diasAnticipacion;
+        if (tipoServicio === 'anual') {
+            diasAnticipacion = 30;
+        } else if (tipoServicio === 'trimestral' || tipoServicio === 'semestral') {
+            diasAnticipacion = 15;
+        } else {
+            diasAnticipacion = 7;
+        }
 
         // Solo enviar si vence HOY o en los próximos N días (NO enviar si ya está vencido)
         return diferenciaDias >= 0 && diferenciaDias <= diasAnticipacion;
@@ -103,7 +111,7 @@ async function enviarLote() {
         }
 
         mensaje += '\nLas órdenes de pago solo se envían a clientes que:\n';
-        mensaje += '• Vencen HOY o en los próximos días (30 días para anuales, 7 días para otros)\n';
+        mensaje += '• Vencen HOY o en los próximos días (30 días anuales, 15 trimestrales/semestrales, 7 mensuales)\n';
         mensaje += '• NO han recibido orden de pago este mes\n';
         mensaje += '• NO están vencidos (para vencidos use Recordatorios)';
 

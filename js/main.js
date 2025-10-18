@@ -714,8 +714,16 @@ function obtenerEstadoPago(fechaVencimiento, tipoServicio = 'anual') {
     const diferenciaDias = Math.floor((fecha - hoy) / (1000 * 60 * 60 * 24));
 
     // Determinar días de anticipación según tipo de servicio
+    // Anuales: 30 días, Trimestrales/Semestrales: 15 días, Mensuales: 7 días
     const tipo = (tipoServicio || 'anual').toLowerCase();
-    const diasAnticipacion = tipo === 'anual' ? 30 : 7;
+    let diasAnticipacion;
+    if (tipo === 'anual') {
+        diasAnticipacion = 30;
+    } else if (tipo === 'trimestral' || tipo === 'semestral') {
+        diasAnticipacion = 15;
+    } else {
+        diasAnticipacion = 7;
+    }
 
     if (diferenciaDias < 0) {
         return {
@@ -898,8 +906,20 @@ async function mostrarListaEnvio() {
         fecha.setHours(0, 0, 0, 0);
         const diferenciaDias = Math.floor((fecha - hoy) / (1000 * 60 * 60 * 24));
 
-        // Solo mostrar si vence HOY o en los próximos 7 días (NO vencidos)
-        return diferenciaDias >= 0 && diferenciaDias <= 7;
+        // Determinar días de anticipación según tipo de servicio
+        // Anuales: 30 días, Trimestrales/Semestrales: 15 días, Mensuales: 7 días
+        const tipoServicio = (cliente.tipo_servicio || 'anual').toLowerCase();
+        let diasAnticipacion;
+        if (tipoServicio === 'anual') {
+            diasAnticipacion = 30;
+        } else if (tipoServicio === 'trimestral' || tipoServicio === 'semestral') {
+            diasAnticipacion = 15;
+        } else {
+            diasAnticipacion = 7;
+        }
+
+        // Solo enviar si vence HOY o en los próximos N días (NO enviar si ya está vencido)
+        return diferenciaDias >= 0 && diferenciaDias <= diasAnticipacion;
     });
 
     // Contar excluidos
@@ -921,7 +941,20 @@ async function mostrarListaEnvio() {
         hoy.setHours(0, 0, 0, 0);
         fecha.setHours(0, 0, 0, 0);
         const diferenciaDias = Math.floor((fecha - hoy) / (1000 * 60 * 60 * 24));
-        return diferenciaDias > 7;
+
+        // Determinar días de anticipación según tipo de servicio
+        // Anuales: 30 días, Trimestrales/Semestrales: 15 días, Mensuales: 7 días
+        const tipoServicio = (c.tipo_servicio || 'anual').toLowerCase();
+        let diasAnticipacion;
+        if (tipoServicio === 'anual') {
+            diasAnticipacion = 30;
+        } else if (tipoServicio === 'trimestral' || tipoServicio === 'semestral') {
+            diasAnticipacion = 15;
+        } else {
+            diasAnticipacion = 7;
+        }
+
+        return diferenciaDias > diasAnticipacion;
     }).length;
 
     if (clientesParaEnviar.length === 0) {
@@ -941,7 +974,7 @@ async function mostrarListaEnvio() {
         }
 
         mensaje += '\nLas órdenes de pago solo se envían a clientes que:\n';
-        mensaje += '• Vencen HOY o en los próximos 7 días\n';
+        mensaje += '• Vencen HOY o en los próximos días (30 días anuales, 15 trimestrales/semestrales, 7 mensuales)\n';
         mensaje += '• NO han recibido orden de pago este mes\n';
         mensaje += '• NO están vencidos';
 
