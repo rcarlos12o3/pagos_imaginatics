@@ -350,6 +350,23 @@ require_once 'auth/session_check.php';
             color: #495057;
             grid-column: span 2;
             margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .client-id {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #e9ecef;
+            color: #6c757d;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-right: 8px;
+            min-width: 40px;
+            font-family: 'Courier New', monospace;
         }
 
         .preview-area {
@@ -848,7 +865,7 @@ require_once 'auth/session_check.php';
                     </div>
                     <!-- Filtro de búsqueda -->
                     <div class="client-filter">
-                        <input type="text" id="searchFilter" placeholder="🔍 Buscar por RUC, razón social o WhatsApp..." 
+                        <input type="text" id="searchFilter" placeholder="🔍 Buscar por ID, RUC, razón social o WhatsApp..."
                                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; font-size: 14px;">
                     </div>
                     <div class="client-list-content" id="clientList">

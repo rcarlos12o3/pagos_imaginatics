@@ -206,7 +206,10 @@ function actualizarListaClientes(clientesFiltrados = null) {
         const estadoPago = obtenerEstadoPago(cliente.fecha, cliente.tipo_servicio);
         return `
         <div class="client-item ${estadoPago.clase}" onclick="seleccionarCliente(${indexOriginal})" data-index="${indexOriginal}">
-            <div class="client-name">${cliente.razonSocial}</div>
+            <div class="client-name">
+                <span class="client-id">#${cliente.id}</span>
+                ${cliente.razonSocial}
+            </div>
             <div class="client-info">
                 <div><strong>RUC:</strong> ${cliente.ruc}</div>
                 <div><strong>Monto:</strong> S/ ${cliente.monto}</div>
@@ -241,14 +244,16 @@ function filtrarClientes(termino) {
     }
 
     termino = termino.toLowerCase().trim();
-    
+
     const clientesFiltrados = clientes.filter(cliente => {
+        const id = cliente.id ? cliente.id.toString() : '';
         const ruc = cliente.ruc.toLowerCase();
         const razonSocial = cliente.razonSocial.toLowerCase();
         const whatsapp = cliente.whatsapp.toLowerCase();
-        
-        return ruc.includes(termino) || 
-               razonSocial.includes(termino) || 
+
+        return id.includes(termino) ||
+               ruc.includes(termino) ||
+               razonSocial.includes(termino) ||
                whatsapp.includes(termino);
     });
 
