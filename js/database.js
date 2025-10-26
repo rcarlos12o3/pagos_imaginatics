@@ -280,6 +280,17 @@ async function verificarVencimientos() {
                 });
             });
 
+            // Verificar si hay clientes para notificar
+            if (clientesNotificar.length === 0 && resultado.total === 0) {
+                alert('ℹ️ No hay clientes para enviar recordatorios.\n\n' +
+                      '📋 Los recordatorios solo se envían a clientes que:\n' +
+                      '• Ya recibieron su orden de pago este mes\n' +
+                      '• Están próximos a vencer o vencidos\n' +
+                      '• No están excluidos de notificaciones\n\n' +
+                      '💡 Primero envíe las órdenes de pago (Sección 5) y luego los recordatorios.');
+                return;
+            }
+
             mostrarResultadosVencimientos(resultado);
             document.getElementById('btnEnviarRecordatorios').disabled = clientesNotificar.length === 0;
         } else {

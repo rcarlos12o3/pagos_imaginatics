@@ -241,8 +241,8 @@ function searchClientes($database, $query) {
  */
 function getVencimientos($database, $dias) {
     try {
-        // Consulta simplificada: NO excluir clientes con pagos previos
-        // porque esos pagos corresponden al periodo anterior
+        // Solo incluir clientes que YA recibieron orden de pago en el periodo actual
+        // Los recordatorios solo se envían si previamente se envió la orden de pago
         $sql = "SELECT c.*,
                 DATEDIFF(c.fecha_vencimiento, CURDATE()) as dias_restantes,
                 (SELECT MAX(hp.fecha_pago) FROM historial_pagos hp WHERE hp.cliente_id = c.id) as ultimo_pago,
@@ -251,10 +251,22 @@ function getVencimientos($database, $dias) {
                     WHEN DATEDIFF(c.fecha_vencimiento, CURDATE()) = 0 THEN 'VENCE_HOY'
                     ELSE 'POR_VENCER'
                 END as estado_vencimiento,
-                ABS(DATEDIFF(c.fecha_vencimiento, CURDATE())) as dias_absolutos
+                ABS(DATEDIFF(c.fecha_vencimiento, CURDATE())) as dias_absolutos,
+                (SELECT COUNT(*) FROM envios_whatsapp ew
+                 WHERE ew.cliente_id = c.id
+                 AND ew.tipo_envio = 'orden_pago'
+                 AND MONTH(ew.fecha_envio) = MONTH(CURDATE())
+                 AND YEAR(ew.fecha_envio) = YEAR(CURDATE())) as orden_pago_enviada
                 FROM clientes c
                 WHERE c.activo = TRUE
                 AND DATEDIFF(c.fecha_vencimiento, CURDATE()) <= ?
+                AND EXISTS (
+                    SELECT 1 FROM envios_whatsapp ew
+                    WHERE ew.cliente_id = c.id
+                    AND ew.tipo_envio = 'orden_pago'
+                    AND MONTH(ew.fecha_envio) = MONTH(CURDATE())
+                    AND YEAR(ew.fecha_envio) = YEAR(CURDATE())
+                )
                 ORDER BY c.fecha_vencimiento ASC";
 
         $clientes = $database->fetchAll($sql, [$dias]);

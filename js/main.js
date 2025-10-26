@@ -540,7 +540,11 @@ function mostrarResultadosVencimientos(resultado) {
     const totalClientes = resultado.vencidos.length + resultado.vence_hoy.length + resultado.por_vencer.length;
 
     if (totalClientes === 0) {
-        alert('✅ ¡Todos los clientes están al día!');
+        alert('ℹ️ No hay clientes para recordatorios de vencimiento.\n\n' +
+              '📋 Los recordatorios solo se envían a clientes que:\n' +
+              '• Ya recibieron su orden de pago este mes\n' +
+              '• Están próximos a vencer o vencidos\n\n' +
+              '💡 Primero envíe las órdenes de pago (Sección 5: Envío en Lote)');
         return;
     }
 
