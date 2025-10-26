@@ -154,10 +154,18 @@ function validarRUC(ruc) {
 function mostrarRazonSocial(razonSocial) {
     const display = document.getElementById('razonSocialDisplay');
     const text = document.getElementById('razonSocialText');
+    const editField = document.getElementById('razonSocial');
+    const editContainer = document.getElementById('razonSocialEdit');
 
     if (display && text) {
         text.textContent = razonSocial;
         display.classList.remove('hidden');
+    }
+
+    // Si el campo editable está visible (modo edición), actualizarlo también
+    if (editContainer && !editContainer.classList.contains('hidden') && editField) {
+        const razonSocialLimpia = razonSocial.split(' (')[0]; // Remover etiquetas como (Cache) o (API)
+        editField.value = razonSocialLimpia;
     }
 }
 

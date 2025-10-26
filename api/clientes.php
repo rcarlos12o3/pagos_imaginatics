@@ -521,6 +521,15 @@ function handlePut($database, $input) {
         $updates = [];
         $params = [];
 
+        if (isset($input['ruc'])) {
+            $rucValidation = validateRUC($input['ruc']);
+            if (!$rucValidation['valid']) {
+                jsonResponse(['success' => false, 'error' => $rucValidation['message']], 400);
+            }
+            $updates[] = "ruc = ?";
+            $params[] = $rucValidation['ruc'];
+        }
+
         if (isset($input['razon_social'])) {
             $updates[] = "razon_social = ?";
             $params[] = trim($input['razon_social']);
