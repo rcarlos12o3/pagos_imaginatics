@@ -208,11 +208,12 @@ require_once 'auth/session_check.php';
                             <th>Estado</th>
                             <th>Fecha de Envío</th>
                             <th>WhatsApp</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="historialBody">
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 40px;">
+                            <td colspan="8" style="text-align: center; padding: 40px;">
                                 Cargando historial...
                             </td>
                         </tr>
@@ -268,7 +269,7 @@ require_once 'auth/session_check.php';
 
             if (envios.length === 0) {
                 tbody.innerHTML = `
-                    <tr><td colspan="7" style="text-align: center; padding: 40px; color: #666;">
+                    <tr><td colspan="8" style="text-align: center; padding: 40px; color: #666;">
                         No se encontraron envíos
                     </td></tr>
                 `;
@@ -286,12 +287,30 @@ require_once 'auth/session_check.php';
                         </span>
                     </td>
                     <td>
-                        <span class="badge ${e.estado === 'enviado' ? 'badge-enviado' : 'badge-error'}">
-                            ${e.estado === 'enviado' ? '✓ Enviado' : '✗ Error'}
+                        <span class="badge ${
+                            e.estado === 'enviado' ? 'badge-enviado' :
+                            e.estado === 'pendiente' ? 'badge-recordatorio' :
+                            'badge-error'
+                        }">
+                            ${
+                                e.estado === 'enviado' ? '✓ Enviado' :
+                                e.estado === 'pendiente' ? '⏳ Pendiente' :
+                                '✗ Error'
+                            }
                         </span>
                     </td>
-                    <td>${formatFecha(e.fecha_envio)}</td>
+                    <td id="fecha-${e.id}">${formatFecha(e.fecha_envio)}</td>
                     <td>${e.whatsapp}</td>
+                    <td style="white-space: nowrap;">
+                        <button class="btn" style="padding: 6px 12px; font-size: 12px; background: #f39325; color: white; margin-right: 5px;"
+                                onclick='editarEnvio(${e.id}, "${e.fecha_envio}", "${e.razon_social.replace(/"/g, '&quot;')}", "${e.estado}")'>
+                            ✏️ Editar
+                        </button>
+                        <button class="btn" style="padding: 6px 12px; font-size: 12px; background: #dc3545; color: white;"
+                                onclick='eliminarEnvio(${e.id}, "${e.razon_social.replace(/"/g, '&quot;')}")'>
+                            🗑️
+                        </button>
+                    </td>
                 </tr>
             `).join('');
         }
@@ -371,6 +390,123 @@ require_once 'auth/session_check.php';
         document.getElementById('searchCliente').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') cargarHistorial();
         });
+
+        // Función para editar envío (fecha y estado)
+        function editarEnvio(envioId, fechaActual, clienteNombre, estadoActual) {
+            const fecha = new Date(fechaActual);
+            const fechaFormateada = fecha.toISOString().slice(0, 16).replace('T', ' ');
+
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+            modal.innerHTML = `
+                <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                    <h2 style="margin: 0 0 20px 0; color: #2581c4;">✏️ Editar Envío</h2>
+                    <p style="margin: 0 0 20px 0; color: #666;"><strong>Cliente:</strong> ${clienteNombre}</p>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">Fecha de Envío:</label>
+                        <input type="text" id="modalFecha" value="${fechaFormateada}"
+                               style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 5px; font-size: 14px;"
+                               placeholder="YYYY-MM-DD HH:MM">
+                        <small style="color: #666; font-size: 12px;">Formato: YYYY-MM-DD HH:MM (ej: 2025-10-15 14:30)</small>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">Estado:</label>
+                        <select id="modalEstado" style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 5px; font-size: 14px;">
+                            <option value="enviado" ${estadoActual === 'enviado' ? 'selected' : ''}>✓ Enviado</option>
+                            <option value="error" ${estadoActual === 'error' ? 'selected' : ''}>✗ Error</option>
+                            <option value="pendiente" ${estadoActual === 'pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button onclick="this.closest('div[style*=fixed]').remove()"
+                                style="padding: 10px 20px; border: 1px solid #ced4da; background: white; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                            Cancelar
+                        </button>
+                        <button onclick="guardarEdicionEnvio(${envioId})"
+                                style="padding: 10px 20px; border: none; background: linear-gradient(45deg, #2581c4, #1a6399); color: white; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                            💾 Guardar Cambios
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        async function guardarEdicionEnvio(envioId) {
+            const nuevaFecha = document.getElementById('modalFecha').value;
+            const nuevoEstado = document.getElementById('modalEstado').value;
+
+            console.log('Valores a enviar:', { envioId, nuevaFecha, nuevoEstado });
+
+            // Validar formato
+            const regex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
+            if (!regex.test(nuevaFecha)) {
+                alert('❌ Formato de fecha inválido.\nUse: YYYY-MM-DD HH:MM\nEjemplo: 2025-10-15 14:30');
+                return;
+            }
+
+            try {
+                const payload = {
+                    action: 'actualizar_envio',
+                    envio_id: envioId,
+                    nueva_fecha: nuevaFecha,
+                    nuevo_estado: nuevoEstado
+                };
+
+                console.log('Payload enviado:', payload);
+
+                const response = await fetch('/api/envios.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Envío actualizado correctamente');
+                    document.querySelector('div[style*="fixed"]').remove();
+                    cargarHistorial();
+                } else {
+                    alert('❌ Error al actualizar: ' + (data.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Error de conexión al actualizar');
+            }
+        }
+
+        async function eliminarEnvio(envioId, clienteNombre) {
+            if (!confirm(`⚠️ ¿Eliminar este envío?\n\nCliente: ${clienteNombre}\n\nEsta acción no se puede deshacer.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/envios.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'eliminar_envio',
+                        envio_id: envioId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Envío eliminado correctamente');
+                    cargarHistorial();
+                } else {
+                    alert('❌ Error al eliminar: ' + (data.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Error de conexión al eliminar');
+            }
+        }
     </script>
 </body>
 </html>

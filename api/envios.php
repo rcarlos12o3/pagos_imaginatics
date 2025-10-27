@@ -218,9 +218,18 @@ function handlePost($database, $input) {
         case 'test_connection':
             testConexionWhatsApp($database);
             break;
-        case 'generar_imagen_recordatorio':  // ← AGREGAR ESTA LÍNEA
-            generarImagenRecordatorioEndpoint($database, $input);  // ← Y ESTA
-            break;  // ← Y ESTA
+        case 'generar_imagen_recordatorio':
+            generarImagenRecordatorioEndpoint($database, $input);
+            break;
+        case 'actualizar_fecha':
+            actualizarFechaEnvio($database, $input);
+            break;
+        case 'actualizar_envio':
+            actualizarEnvio($database, $input);
+            break;
+        case 'eliminar_envio':
+            eliminarEnvio($database, $input);
+            break;
         default:
             jsonResponse(['success' => false, 'error' => 'Acción no válida'], 400);
     }
@@ -1005,5 +1014,192 @@ function generarImagenRecordatorioEndpoint($database, $input) {
     }
 }
 
-// ← Aquí va el
+/**
+ * Actualizar fecha de envío
+ */
+function actualizarFechaEnvio($database, $input) {
+    // Validar entrada
+    if (!isset($input['envio_id']) || !isset($input['nueva_fecha'])) {
+        jsonResponse(['success' => false, 'error' => 'ID de envío y nueva fecha son requeridos'], 400);
+    }
+
+    $envioId = $input['envio_id'];
+    $nuevaFecha = $input['nueva_fecha'];
+
+    // Validar formato de fecha (YYYY-MM-DD HH:MM)
+    $regex = '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/';
+    if (!preg_match($regex, $nuevaFecha)) {
+        jsonResponse(['success' => false, 'error' => 'Formato de fecha inválido. Use: YYYY-MM-DD HH:MM'], 400);
+    }
+
+    try {
+        // Verificar que el envío existe
+        $envio = $database->fetch(
+            "SELECT * FROM envios_whatsapp WHERE id = ?",
+            [$envioId]
+        );
+
+        if (!$envio) {
+            jsonResponse(['success' => false, 'error' => 'Envío no encontrado'], 404);
+        }
+
+        // Actualizar la fecha
+        $database->query(
+            "UPDATE envios_whatsapp SET fecha_envio = ? WHERE id = ?",
+            [$nuevaFecha, $envioId]
+        );
+
+        // Log del sistema
+        $database->log('info', 'envios', 'Fecha de envío actualizada manualmente', [
+            'envio_id' => $envioId,
+            'fecha_anterior' => $envio['fecha_envio'],
+            'fecha_nueva' => $nuevaFecha,
+            'cliente_id' => $envio['cliente_id']
+        ]);
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Fecha actualizada correctamente',
+            'data' => [
+                'envio_id' => $envioId,
+                'fecha_anterior' => $envio['fecha_envio'],
+                'fecha_nueva' => $nuevaFecha
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        $database->log('error', 'envios', 'Error al actualizar fecha de envío: ' . $e->getMessage());
+        jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Actualizar envío completo (fecha y estado)
+ */
+function actualizarEnvio($database, $input) {
+    // Log para debug
+    $database->log('debug', 'envios', 'actualizarEnvio recibido', [
+        'input_completo' => $input,
+        'envio_id' => $input['envio_id'] ?? 'NO_DEFINIDO',
+        'nueva_fecha' => $input['nueva_fecha'] ?? 'NO_DEFINIDO',
+        'nuevo_estado' => $input['nuevo_estado'] ?? 'NO_DEFINIDO'
+    ]);
+
+    // Validar entrada
+    if (!isset($input['envio_id']) || !isset($input['nueva_fecha']) || !isset($input['nuevo_estado'])) {
+        jsonResponse(['success' => false, 'error' => 'ID de envío, nueva fecha y nuevo estado son requeridos'], 400);
+    }
+
+    $envioId = $input['envio_id'];
+    $nuevaFecha = $input['nueva_fecha'];
+    $nuevoEstado = $input['nuevo_estado'];
+
+    // Validar formato de fecha (YYYY-MM-DD HH:MM)
+    $regex = '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/';
+    if (!preg_match($regex, $nuevaFecha)) {
+        jsonResponse(['success' => false, 'error' => 'Formato de fecha inválido. Use: YYYY-MM-DD HH:MM'], 400);
+    }
+
+    // Validar estado
+    $estadosPermitidos = ['enviado', 'error', 'pendiente'];
+    if (!in_array($nuevoEstado, $estadosPermitidos)) {
+        jsonResponse(['success' => false, 'error' => 'Estado debe ser: enviado, error o pendiente'], 400);
+    }
+
+    try {
+        // Verificar que el envío existe
+        $envio = $database->fetch(
+            "SELECT * FROM envios_whatsapp WHERE id = ?",
+            [$envioId]
+        );
+
+        if (!$envio) {
+            jsonResponse(['success' => false, 'error' => 'Envío no encontrado'], 404);
+        }
+
+        // Actualizar fecha y estado
+        $database->query(
+            "UPDATE envios_whatsapp SET fecha_envio = ?, estado = ? WHERE id = ?",
+            [$nuevaFecha, $nuevoEstado, $envioId]
+        );
+
+        // Log del sistema
+        $database->log('info', 'envios', 'Envío actualizado manualmente', [
+            'envio_id' => $envioId,
+            'fecha_anterior' => $envio['fecha_envio'],
+            'fecha_nueva' => $nuevaFecha,
+            'estado_anterior' => $envio['estado'],
+            'estado_nuevo' => $nuevoEstado,
+            'cliente_id' => $envio['cliente_id']
+        ]);
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Envío actualizado correctamente',
+            'data' => [
+                'envio_id' => $envioId,
+                'cambios' => [
+                    'fecha' => ['anterior' => $envio['fecha_envio'], 'nueva' => $nuevaFecha],
+                    'estado' => ['anterior' => $envio['estado'], 'nuevo' => $nuevoEstado]
+                ]
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        $database->log('error', 'envios', 'Error al actualizar envío: ' . $e->getMessage());
+        jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Eliminar envío
+ */
+function eliminarEnvio($database, $input) {
+    // Validar entrada
+    if (!isset($input['envio_id'])) {
+        jsonResponse(['success' => false, 'error' => 'ID de envío requerido'], 400);
+    }
+
+    $envioId = $input['envio_id'];
+
+    try {
+        // Verificar que el envío existe
+        $envio = $database->fetch(
+            "SELECT * FROM envios_whatsapp WHERE id = ?",
+            [$envioId]
+        );
+
+        if (!$envio) {
+            jsonResponse(['success' => false, 'error' => 'Envío no encontrado'], 404);
+        }
+
+        // Eliminar el envío
+        $database->query(
+            "DELETE FROM envios_whatsapp WHERE id = ?",
+            [$envioId]
+        );
+
+        // Log del sistema
+        $database->log('warning', 'envios', 'Envío eliminado manualmente', [
+            'envio_id' => $envioId,
+            'cliente_id' => $envio['cliente_id'],
+            'tipo_envio' => $envio['tipo_envio'],
+            'fecha_envio' => $envio['fecha_envio'],
+            'estado' => $envio['estado']
+        ]);
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Envío eliminado correctamente',
+            'data' => [
+                'envio_id' => $envioId
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        $database->log('error', 'envios', 'Error al eliminar envío: ' . $e->getMessage());
+        jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
 ?>
