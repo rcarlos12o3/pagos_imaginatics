@@ -241,8 +241,9 @@ function searchClientes($database, $query) {
  */
 function getVencimientos($database, $dias) {
     try {
-        // Solo incluir clientes que YA recibieron orden de pago en el periodo actual
+        // Solo incluir clientes que YA recibieron orden de pago para el periodo de vencimiento actual
         // Los recordatorios solo se envían si previamente se envió la orden de pago
+        // Validación: debe existir una orden enviada DESPUÉS del último pago registrado
         $sql = "SELECT c.*,
                 DATEDIFF(c.fecha_vencimiento, CURDATE()) as dias_restantes,
                 (SELECT MAX(hp.fecha_pago) FROM historial_pagos hp WHERE hp.cliente_id = c.id) as ultimo_pago,
@@ -255,8 +256,16 @@ function getVencimientos($database, $dias) {
                 (SELECT COUNT(*) FROM envios_whatsapp ew
                  WHERE ew.cliente_id = c.id
                  AND ew.tipo_envio = 'orden_pago'
-                 AND MONTH(ew.fecha_envio) = MONTH(CURDATE())
-                 AND YEAR(ew.fecha_envio) = YEAR(CURDATE())) as orden_pago_enviada
+                 AND ew.fecha_envio >= COALESCE(
+                     (SELECT MAX(hp.fecha_pago) FROM historial_pagos hp WHERE hp.cliente_id = c.id),
+                     DATE_SUB(c.fecha_vencimiento, INTERVAL
+                         CASE
+                             WHEN c.tipo_servicio = 'mensual' THEN 1
+                             WHEN c.tipo_servicio = 'trimestral' THEN 3
+                             WHEN c.tipo_servicio = 'semestral' THEN 6
+                             ELSE 12
+                         END MONTH)
+                 )) as orden_pago_enviada
                 FROM clientes c
                 WHERE c.activo = TRUE
                 AND DATEDIFF(c.fecha_vencimiento, CURDATE()) <= ?
@@ -264,8 +273,16 @@ function getVencimientos($database, $dias) {
                     SELECT 1 FROM envios_whatsapp ew
                     WHERE ew.cliente_id = c.id
                     AND ew.tipo_envio = 'orden_pago'
-                    AND MONTH(ew.fecha_envio) = MONTH(CURDATE())
-                    AND YEAR(ew.fecha_envio) = YEAR(CURDATE())
+                    AND ew.fecha_envio >= COALESCE(
+                        (SELECT MAX(hp.fecha_pago) FROM historial_pagos hp WHERE hp.cliente_id = c.id),
+                        DATE_SUB(c.fecha_vencimiento, INTERVAL
+                            CASE
+                                WHEN c.tipo_servicio = 'mensual' THEN 1
+                                WHEN c.tipo_servicio = 'trimestral' THEN 3
+                                WHEN c.tipo_servicio = 'semestral' THEN 6
+                                ELSE 12
+                            END MONTH)
+                    )
                 )
                 ORDER BY c.fecha_vencimiento ASC";
 
