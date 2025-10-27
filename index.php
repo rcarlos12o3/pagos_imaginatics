@@ -710,11 +710,11 @@ require_once 'auth/session_check.php';
     <div class="container">
         <div class="header">
             <div class="nav-buttons">
+                <a href="historial_envios.php" class="nav-btn">📋 Historial de Envíos</a>
                 <a href="pagos.php" class="nav-btn">💳 Gestión de Pagos</a>
                 <span class="nav-btn" style="background: rgba(255,255,255,0.1);">👤 <?php echo $_SESSION['nombre'] ?? 'Usuario'; ?></span>
                 <a href="#" onclick="logout()" class="nav-btn" style="background: rgba(255,0,0,0.2);">🚪 Salir</a>
-            </div>
-            <h1>Generador de Ordenes de Pago</h1>
+            </div>            <h1>Generador de Ordenes de Pago</h1>
             <p>Sistema integral para gestion de pagos y notificaciones por WhatsApp</p>
         </div>
 
