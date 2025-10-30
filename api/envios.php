@@ -301,6 +301,15 @@ function enviarTextoWhatsApp($database, $input) {
     $required = ['cliente_id', 'numero', 'mensaje'];
     $errors = validateInputLocal($input, $required);
 
+    // Obtener tipo_envio del input, por defecto 'orden_pago' para compatibilidad
+    $tipo_envio = $input['tipo_envio'] ?? 'orden_pago';
+
+    // Validar que sea un tipo válido
+    $tipos_validos = ['orden_pago', 'recordatorio_proximo', 'recordatorio_vencido'];
+    if (!in_array($tipo_envio, $tipos_validos)) {
+        $tipo_envio = 'orden_pago';
+    }
+
     if (!empty($errors)) {
         jsonResponse(['success' => false, 'errors' => $errors], 400);
     }
@@ -331,7 +340,7 @@ function enviarTextoWhatsApp($database, $input) {
             [
                 $input['cliente_id'],
                 $numero,
-                'orden_pago',
+                $tipo_envio,
                 $resultado['success'] ? 'enviado' : 'error',
                 json_encode($resultado['response']),
                 $resultado['error'],

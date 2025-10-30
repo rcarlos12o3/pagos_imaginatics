@@ -276,6 +276,7 @@ async function procesarRecordatoriosConImagenes(clientes) {
                 const mensaje = generarMensajeRecordatorio(cliente, diasRestantes);
 
                 // Enviar texto
+                const tipoEnvio = diasRestantes < 0 ? 'recordatorio_vencido' : 'recordatorio_proximo';
                 const resultadoTexto = await fetch(API_ENVIOS_BASE, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -283,7 +284,8 @@ async function procesarRecordatoriosConImagenes(clientes) {
                         action: 'enviar_texto',
                         cliente_id: cliente.id,
                         numero: cliente.whatsapp,
-                        mensaje: mensaje
+                        mensaje: mensaje,
+                        tipo_envio: tipoEnvio
                     })
                 });
 
