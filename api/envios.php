@@ -52,6 +52,19 @@ function handleGet($database) {
         case 'enviados_mes_actual':
             getEnviadosMesActual($database);
             break;
+        // NUEVOS ENDPOINTS DE COLA
+        case 'sesiones_activas':
+            getSesionesActivas($database);
+            break;
+        case 'sesion_detalle':
+            getSesionDetalle($database, $_GET['sesion_id'] ?? null);
+            break;
+        case 'estadisticas_cola':
+            getEstadisticasCola($database);
+            break;
+        case 'trabajos_sesion':
+            getTrabajosSesion($database, $_GET['sesion_id'] ?? null);
+            break;
         default:
             jsonResponse(['success' => false, 'error' => 'Acción no válida'], 400);
     }
@@ -229,6 +242,19 @@ function handlePost($database, $input) {
             break;
         case 'eliminar_envio':
             eliminarEnvio($database, $input);
+            break;
+        // NUEVOS ENDPOINTS DE COLA
+        case 'crear_sesion_cola':
+            crearSesionCola($database, $input);
+            break;
+        case 'agregar_trabajos_cola':
+            agregarTrabajosCola($database, $input);
+            break;
+        case 'cancelar_sesion':
+            cancelarSesion($database, $input);
+            break;
+        case 'reintentar_trabajo':
+            reintentarTrabajo($database, $input);
             break;
         default:
             jsonResponse(['success' => false, 'error' => 'Acción no válida'], 400);
@@ -1208,6 +1234,385 @@ function eliminarEnvio($database, $input) {
     } catch (Exception $e) {
         $database->log('error', 'envios', 'Error al eliminar envío: ' . $e->getMessage());
         jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+// ============================================
+// FUNCIONES DE SISTEMA DE COLA
+// ============================================
+
+/**
+ * Obtener sesiones activas (pendientes o procesando)
+ */
+function getSesionesActivas($database) {
+    try {
+        $sesiones = $database->fetchAll("SELECT * FROM v_sesiones_activas");
+
+        jsonResponse([
+            'success' => true,
+            'data' => $sesiones,
+            'total' => count($sesiones)
+        ]);
+
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Obtener detalle de una sesión específica
+ */
+function getSesionDetalle($database, $sesionId) {
+    if (!$sesionId) {
+        jsonResponse(['success' => false, 'error' => 'ID de sesión requerido'], 400);
+    }
+
+    try {
+        $sesion = $database->fetch(
+            "SELECT * FROM sesiones_envio WHERE id = ?",
+            [$sesionId]
+        );
+
+        if (!$sesion) {
+            jsonResponse(['success' => false, 'error' => 'Sesión no encontrada'], 404);
+        }
+
+        // Obtener estadísticas de trabajos
+        $stats = $database->fetch("
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN estado = 'pendiente' THEN 1 ELSE 0 END) as pendientes,
+                SUM(CASE WHEN estado = 'procesando' THEN 1 ELSE 0 END) as procesando,
+                SUM(CASE WHEN estado = 'enviado' THEN 1 ELSE 0 END) as enviados,
+                SUM(CASE WHEN estado = 'error' THEN 1 ELSE 0 END) as errores,
+                SUM(CASE WHEN estado = 'cancelado' THEN 1 ELSE 0 END) as cancelados
+            FROM cola_envios
+            WHERE sesion_id = ?
+        ", [$sesionId]);
+
+        jsonResponse([
+            'success' => true,
+            'data' => [
+                'sesion' => $sesion,
+                'estadisticas' => $stats
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Obtener estadísticas generales de la cola
+ */
+function getEstadisticasCola($database) {
+    try {
+        $stats = $database->fetch("SELECT * FROM v_estadisticas_cola");
+
+        jsonResponse([
+            'success' => true,
+            'data' => $stats
+        ]);
+
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Obtener trabajos de una sesión
+ */
+function getTrabajosSesion($database, $sesionId) {
+    if (!$sesionId) {
+        jsonResponse(['success' => false, 'error' => 'ID de sesión requerido'], 400);
+    }
+
+    try {
+        $trabajos = $database->fetchAll("
+            SELECT
+                id, cliente_id, ruc, razon_social, whatsapp, monto,
+                fecha_vencimiento, tipo_servicio, tipo_envio,
+                estado, intentos, max_intentos,
+                fecha_creacion, fecha_procesamiento, fecha_envio,
+                mensaje_error
+            FROM cola_envios
+            WHERE sesion_id = ?
+            ORDER BY fecha_creacion ASC
+        ", [$sesionId]);
+
+        jsonResponse([
+            'success' => true,
+            'data' => $trabajos,
+            'total' => count($trabajos)
+        ]);
+
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Crear una nueva sesión de envío y agregar trabajos a la cola
+ */
+function crearSesionCola($database, $input) {
+    $required = ['tipo_envio', 'clientes'];
+    $errors = validateInputLocal($input, $required);
+
+    if (!empty($errors)) {
+        jsonResponse(['success' => false, 'errors' => $errors], 400);
+    }
+
+    if (!is_array($input['clientes']) || empty($input['clientes'])) {
+        jsonResponse(['success' => false, 'error' => 'Lista de clientes inválida o vacía'], 400);
+    }
+
+    try {
+        $database->beginTransaction();
+
+        // Crear sesión
+        $sesionId = $database->insert("
+            INSERT INTO sesiones_envio (tipo_envio, total_clientes, estado, configuracion)
+            VALUES (?, ?, 'pendiente', ?)
+        ", [
+            $input['tipo_envio'],
+            count($input['clientes']),
+            json_encode($input['configuracion'] ?? [])
+        ]);
+
+        // Agregar trabajos a la cola
+        $trabajosAgregados = 0;
+        foreach ($input['clientes'] as $cliente) {
+            // Generar mensaje según tipo
+            $mensaje = generarMensajeParaTrabajo($cliente, $input['tipo_envio']);
+
+            $database->insert("
+                INSERT INTO cola_envios (
+                    sesion_id, cliente_id, tipo_envio, prioridad,
+                    ruc, razon_social, whatsapp, monto, fecha_vencimiento, tipo_servicio,
+                    mensaje_texto, imagen_base64, dias_restantes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ", [
+                $sesionId,
+                $cliente['id'],
+                $input['tipo_envio'],
+                $cliente['prioridad'] ?? 0,
+                $cliente['ruc'],
+                $cliente['razon_social'] ?? $cliente['razonSocial'],
+                $cliente['whatsapp'],
+                $cliente['monto'],
+                $cliente['fecha_vencimiento'] ?? $cliente['fecha'],
+                $cliente['tipo_servicio'] ?? 'anual',
+                $mensaje,
+                $cliente['imagen_base64'] ?? null,
+                $cliente['dias_restantes'] ?? null
+            ]);
+
+            $trabajosAgregados++;
+        }
+
+        $database->commit();
+
+        $database->log('info', 'cola_envios', "Sesión creada: #{$sesionId} con {$trabajosAgregados} trabajos");
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Sesión creada exitosamente',
+            'data' => [
+                'sesion_id' => $sesionId,
+                'trabajos_agregados' => $trabajosAgregados
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        $database->rollback();
+        $database->log('error', 'cola_envios', 'Error creando sesión: ' . $e->getMessage());
+        jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Agregar más trabajos a una sesión existente
+ */
+function agregarTrabajosCola($database, $input) {
+    $required = ['sesion_id', 'clientes'];
+    $errors = validateInputLocal($input, $required);
+
+    if (!empty($errors)) {
+        jsonResponse(['success' => false, 'errors' => $errors], 400);
+    }
+
+    try {
+        $database->beginTransaction();
+
+        // Verificar que la sesión existe y está activa
+        $sesion = $database->fetch(
+            "SELECT * FROM sesiones_envio WHERE id = ? AND estado IN ('pendiente', 'procesando')",
+            [$input['sesion_id']]
+        );
+
+        if (!$sesion) {
+            jsonResponse(['success' => false, 'error' => 'Sesión no encontrada o ya finalizada'], 404);
+        }
+
+        // Agregar trabajos
+        $trabajosAgregados = 0;
+        foreach ($input['clientes'] as $cliente) {
+            $mensaje = generarMensajeParaTrabajo($cliente, $sesion['tipo_envio']);
+
+            $database->insert("
+                INSERT INTO cola_envios (
+                    sesion_id, cliente_id, tipo_envio, prioridad,
+                    ruc, razon_social, whatsapp, monto, fecha_vencimiento, tipo_servicio,
+                    mensaje_texto, imagen_base64, dias_restantes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ", [
+                $input['sesion_id'],
+                $cliente['id'],
+                $sesion['tipo_envio'],
+                $cliente['prioridad'] ?? 0,
+                $cliente['ruc'],
+                $cliente['razon_social'] ?? $cliente['razonSocial'],
+                $cliente['whatsapp'],
+                $cliente['monto'],
+                $cliente['fecha_vencimiento'] ?? $cliente['fecha'],
+                $cliente['tipo_servicio'] ?? 'anual',
+                $mensaje,
+                $cliente['imagen_base64'] ?? null,
+                $cliente['dias_restantes'] ?? null
+            ]);
+
+            $trabajosAgregados++;
+        }
+
+        // Actualizar total de clientes en la sesión
+        $database->query("
+            UPDATE sesiones_envio
+            SET total_clientes = total_clientes + ?
+            WHERE id = ?
+        ", [$trabajosAgregados, $input['sesion_id']]);
+
+        $database->commit();
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Trabajos agregados exitosamente',
+            'data' => [
+                'sesion_id' => $input['sesion_id'],
+                'trabajos_agregados' => $trabajosAgregados
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        $database->rollback();
+        jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Cancelar una sesión y sus trabajos pendientes
+ */
+function cancelarSesion($database, $input) {
+    if (!isset($input['sesion_id'])) {
+        jsonResponse(['success' => false, 'error' => 'ID de sesión requerido'], 400);
+    }
+
+    try {
+        $database->beginTransaction();
+
+        // Verificar que la sesión existe
+        $sesion = $database->fetch(
+            "SELECT * FROM sesiones_envio WHERE id = ?",
+            [$input['sesion_id']]
+        );
+
+        if (!$sesion) {
+            jsonResponse(['success' => false, 'error' => 'Sesión no encontrada'], 404);
+        }
+
+        // Cancelar trabajos pendientes
+        $database->query("
+            UPDATE cola_envios
+            SET estado = 'cancelado'
+            WHERE sesion_id = ?
+            AND estado IN ('pendiente', 'error')
+        ", [$input['sesion_id']]);
+
+        // Marcar sesión como cancelada
+        $database->query("
+            UPDATE sesiones_envio
+            SET estado = 'cancelado', fecha_finalizacion = NOW()
+            WHERE id = ?
+        ", [$input['sesion_id']]);
+
+        $database->commit();
+
+        $database->log('warning', 'cola_envios', "Sesión #{$input['sesion_id']} cancelada");
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Sesión cancelada exitosamente'
+        ]);
+
+    } catch (Exception $e) {
+        $database->rollback();
+        jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Reintentar un trabajo que falló
+ */
+function reintentarTrabajo($database, $input) {
+    if (!isset($input['trabajo_id'])) {
+        jsonResponse(['success' => false, 'error' => 'ID de trabajo requerido'], 400);
+    }
+
+    try {
+        $trabajo = $database->fetch(
+            "SELECT * FROM cola_envios WHERE id = ?",
+            [$input['trabajo_id']]
+        );
+
+        if (!$trabajo) {
+            jsonResponse(['success' => false, 'error' => 'Trabajo no encontrado'], 404);
+        }
+
+        // Resetear para reintentar
+        $database->query("
+            UPDATE cola_envios
+            SET estado = 'pendiente',
+                intentos = 0,
+                mensaje_error = NULL,
+                respuesta_api = NULL
+            WHERE id = ?
+        ", [$input['trabajo_id']]);
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Trabajo marcado para reintento'
+        ]);
+
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Generar mensaje según tipo de envío y datos del cliente
+ */
+function generarMensajeParaTrabajo($cliente, $tipoEnvio) {
+    switch ($tipoEnvio) {
+        case 'orden_pago':
+            return generarMensajeOrdenPago($cliente);
+
+        case 'recordatorio_proximo':
+        case 'recordatorio_vencido':
+            $diasRestantes = $cliente['dias_restantes'] ?? 0;
+            return generarMensajeRecordatorio($cliente, $diasRestantes);
+
+        default:
+            return "Mensaje de Imaginatics Peru SAC";
     }
 }
 

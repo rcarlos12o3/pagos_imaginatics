@@ -8,10 +8,10 @@
 require_once __DIR__ . '/init.php';
 
 // Configuración de la base de datos
-define('DB_HOST', 'mysql');
+define('DB_HOST', '127.0.0.1');
 define('DB_NAME', 'imaginatics_ruc');
-define('DB_USER', 'imaginatics'); // Cambiar por tu usuario
-define('DB_PASS', 'imaginatics123');     // Cambiar por tu contraseña
+define('DB_USER', 'root'); // Usuario local
+define('DB_PASS', '');     // Sin contraseña para MySQL local
 define('DB_CHARSET', 'utf8mb4');
 
 // Configuración de errores

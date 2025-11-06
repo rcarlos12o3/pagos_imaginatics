@@ -151,7 +151,8 @@ async function enviarLote() {
         return;
     }
 
-    await procesarEnvioReal(clientesParaEnviar, 'orden_pago', false);
+    // NUEVO SISTEMA DE COLA: Enviar trabajos a la cola en lugar de procesar directo
+    await enviarLoteACola(clientesParaEnviar, 'orden_pago');
 }
 
 // Enviar recordatorios de vencimiento
@@ -197,8 +198,8 @@ async function enviarRecordatorios() {
         const data = await response.json();
 
         if (data.success && data.action === 'procesar_recordatorios_frontend') {
-            // Procesar con JavaScript para mejor calidad (modo cauteloso)
-            await procesarRecordatoriosConImagenes(data.clientes);
+            // NUEVO: Enviar a cola en lugar de procesar directo
+            await enviarRecordatoriosACola(data.clientes);
         } else {
             alert('Error: ' + (data.error || 'Error desconocido'));
         }
@@ -1170,5 +1171,372 @@ Mantenga sus cuentas al día para evitar interrupciones.
 
 Saludos,
 Equipo de Cobranza - Imaginatics Peru SAC`;
+    }
+}
+
+// ============================================
+// NUEVO SISTEMA DE COLA
+// ============================================
+
+/**
+ * Enviar lote de clientes a la cola para procesamiento en background
+ */
+async function enviarLoteACola(lista, tipoEnvio) {
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+
+    // Deshabilitar botones
+    document.getElementById('btnEnviarLote').disabled = true;
+    document.getElementById('btnEnviarRecordatorios').disabled = true;
+
+    try {
+        if (progressText) {
+            progressText.textContent = 'Generando imágenes para cola...';
+            progressBar.style.width = '10%';
+        }
+
+        console.log('📦 Preparando envío a cola...');
+
+        // Generar imágenes para todos los clientes
+        const clientesConImagenes = [];
+        for (let i = 0; i < lista.length; i++) {
+            const cliente = lista[i];
+
+            if (progressText) {
+                progressText.textContent = `Generando imagen ${i + 1} de ${lista.length}: ${cliente.razonSocial}...`;
+                progressBar.style.width = (10 + ((i / lista.length) * 40)) + '%';
+            }
+
+            console.log(`  📸 Generando imagen para: ${cliente.razonSocial}`);
+
+            // Generar canvas con imagen
+            const canvas = await generarCanvasParaCliente(cliente, tipoEnvio);
+            const imagenBase64 = canvasToBase64(canvas);
+
+            clientesConImagenes.push({
+                id: cliente.id,
+                ruc: cliente.ruc,
+                razon_social: cliente.razonSocial,
+                whatsapp: cliente.whatsapp,
+                monto: cliente.monto,
+                fecha_vencimiento: cliente.fecha,
+                tipo_servicio: cliente.tipo_servicio || 'anual',
+                imagen_base64: imagenBase64,
+                dias_restantes: cliente.dias_restantes || null
+            });
+        }
+
+        if (progressText) {
+            progressText.textContent = 'Enviando trabajos a la cola...';
+            progressBar.style.width = '60%';
+        }
+
+        // Crear sesión en la cola
+        console.log('🚀 Creando sesión en cola...');
+        const response = await fetch(API_ENVIOS_BASE, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'crear_sesion_cola',
+                tipo_envio: tipoEnvio,
+                clientes: clientesConImagenes,
+                configuracion: {
+                    creado_desde: 'frontend',
+                    timestamp: new Date().toISOString()
+                }
+            })
+        });
+
+        const data = await response.json();
+
+        if (progressBar) {
+            progressBar.style.width = '100%';
+        }
+
+        if (data.success) {
+            const sesionId = data.data.sesion_id;
+            const trabajos = data.data.trabajos_agregados;
+
+            console.log(`✅ Sesión creada: #${sesionId} con ${trabajos} trabajos`);
+
+            if (progressText) {
+                progressText.textContent = '✅ Trabajos agregados a la cola';
+            }
+
+            alert(`✅ ¡Envío agregado a la cola exitosamente!
+
+📦 Sesión: #${sesionId}
+📋 Trabajos: ${trabajos}
+
+Los envíos serán procesados automáticamente en segundo plano.
+Puedes cerrar el navegador sin preocupación.
+
+Ve al historial de envíos para monitorear el progreso.`);
+
+            // Redirigir al historial después de 3 segundos
+            setTimeout(() => {
+                window.location.href = 'historial.html?sesion=' + sesionId;
+            }, 3000);
+
+        } else {
+            console.error('❌ Error creando sesión:', data.error);
+            alert('❌ Error al crear sesión en cola: ' + (data.error || 'Error desconocido'));
+        }
+
+    } catch (error) {
+        console.error('❌ Error:', error);
+        alert('❌ Error de conexión: ' + error.message);
+    } finally {
+        // Restaurar botones después de 3 segundos
+        setTimeout(() => {
+            if (progressBar) {
+                progressBar.style.width = '0%';
+                progressText.textContent = '';
+            }
+            document.getElementById('btnEnviarLote').disabled = false;
+            document.getElementById('btnEnviarRecordatorios').disabled = clientesNotificar.length === 0;
+        }, 3000);
+    }
+}
+
+/**
+ * Generar canvas apropiado según el tipo de envío
+ */
+async function generarCanvasParaCliente(cliente, tipoEnvio) {
+    if (tipoEnvio === 'orden_pago') {
+        // Usar la función existente para orden de pago
+        return await generarCanvasOrdenPago(cliente);
+    } else {
+        // Para recordatorios
+        const diasRestantes = cliente.dias_restantes || 0;
+        return await crearCanvasRecordatorioConColores(cliente, diasRestantes);
+    }
+}
+
+/**
+ * Generar canvas de orden de pago (versión async con imágenes)
+ */
+async function generarCanvasOrdenPago(cliente) {
+    return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = 915;
+        canvas.height = 550;
+
+        // Fondo blanco
+        ctx.fillStyle = CONFIG.COLORES.FONDO_BLANCO;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Configurar fuentes
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+
+        // Título principal
+        ctx.fillStyle = CONFIG.COLORES.PRIMARIO;
+        ctx.font = 'bold 28px Arial';
+        ctx.fillText('IMAGINATICS PERU SAC', 50, 40);
+
+        // Línea separadora
+        ctx.strokeStyle = CONFIG.COLORES.PRIMARIO;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(50, 80);
+        ctx.lineTo(865, 80);
+        ctx.stroke();
+
+        // Texto principal
+        ctx.fillStyle = CONFIG.COLORES.TEXTO_PRINCIPAL;
+        ctx.font = '24px Arial';
+        ctx.fillText('Queremos recordarte que tiene 1', 50, 120);
+        ctx.fillText('orden de pago que vence el dia', 50, 150);
+
+        // Fecha destacada
+        const fechaTexto = convertirFechaATexto(cliente.fecha);
+        ctx.fillStyle = CONFIG.COLORES.SECUNDARIO;
+        ctx.font = 'bold 32px Arial';
+        const fechaWidth = ctx.measureText(fechaTexto).width;
+        const centerX = (canvas.width - fechaWidth) / 2;
+        ctx.fillText(fechaTexto, centerX, 200);
+
+        // Marco para la fecha
+        ctx.strokeStyle = CONFIG.COLORES.SECUNDARIO;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(centerX - 20, 195, fechaWidth + 40, 45);
+
+        // Información del cliente
+        ctx.fillStyle = CONFIG.COLORES.TEXTO_SECUNDARIO;
+        ctx.font = '18px Arial';
+        ctx.fillText('Cliente: ' + cliente.razonSocial, 50, 270);
+        ctx.fillText('RUC: ' + cliente.ruc, 50, 295);
+        ctx.fillText('Monto a pagar: S/ ' + cliente.monto, 50, 320);
+
+        // Cuentas bancarias
+        ctx.fillStyle = CONFIG.COLORES.PRIMARIO;
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText('Realice su pago a las siguientes cuentas:', 50, 360);
+
+        ctx.fillStyle = CONFIG.COLORES.TEXTO_SECUNDARIO;
+        ctx.font = '16px Arial';
+        CONFIG.CUENTAS_BANCARIAS.forEach((cuenta, index) => {
+            ctx.fillText(cuenta, 50, 390 + (index * 25));
+        });
+
+        // Cargar imágenes
+        let imagenesRestantes = 2;
+        function imagenCargada() {
+            imagenesRestantes--;
+            if (imagenesRestantes === 0) {
+                resolve(canvas);
+            }
+        }
+
+        // Logo
+        const logo = new Image();
+        logo.onload = function () {
+            ctx.drawImage(logo, 720, 40, 145, 80);
+            imagenCargada();
+        };
+        logo.onerror = imagenCargada;
+        logo.src = 'logo.png';
+
+        // Mascota
+        const mascota = new Image();
+        mascota.onload = function () {
+            ctx.drawImage(mascota, 650, 270, 200, 200);
+            imagenCargada();
+        };
+        mascota.onerror = imagenCargada;
+        mascota.src = 'mascota.png';
+
+        // Timeout
+        setTimeout(() => resolve(canvas), 3000);
+    });
+}
+
+/**
+ * Enviar recordatorios a la cola para procesamiento en background
+ */
+async function enviarRecordatoriosACola(clientes) {
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+
+    // Deshabilitar botones
+    document.getElementById('btnEnviarRecordatorios').disabled = true;
+
+    try {
+        if (progressText) {
+            progressText.textContent = 'Generando imágenes de recordatorios...';
+            progressBar.style.width = '10%';
+        }
+
+        console.log('📦 Preparando recordatorios para cola...');
+
+        // Generar imágenes para todos los clientes
+        const clientesConImagenes = [];
+        for (let i = 0; i < clientes.length; i++) {
+            const cliente = clientes[i];
+
+            if (progressText) {
+                progressText.textContent = `Generando recordatorio ${i + 1} de ${clientes.length}: ${cliente.razon_social}...`;
+                progressBar.style.width = (10 + ((i / clientes.length) * 40)) + '%';
+            }
+
+            console.log(`  📸 Generando recordatorio para: ${cliente.razon_social}`);
+
+            const diasRestantes = parseInt(cliente.dias_restantes);
+
+            // Generar canvas con colores según estado
+            const canvas = await crearCanvasRecordatorioConColores(cliente, diasRestantes);
+            const imagenBase64 = canvasToBase64(canvas);
+
+            // Determinar tipo de envío según días
+            const tipoEnvio = diasRestantes < 0 ? 'recordatorio_vencido' : 'recordatorio_proximo';
+
+            clientesConImagenes.push({
+                id: cliente.id,
+                ruc: cliente.ruc,
+                razon_social: cliente.razon_social,
+                whatsapp: cliente.whatsapp,
+                monto: cliente.monto,
+                fecha_vencimiento: cliente.fecha_vencimiento,
+                tipo_servicio: cliente.tipo_servicio || 'anual',
+                imagen_base64: imagenBase64,
+                dias_restantes: diasRestantes,
+                tipo_envio_calculado: tipoEnvio
+            });
+        }
+
+        if (progressText) {
+            progressText.textContent = 'Enviando recordatorios a la cola...';
+            progressBar.style.width = '60%';
+        }
+
+        // Crear sesión en la cola (usar el primer tipo de envío como referencia)
+        const tipoEnvioSesion = clientesConImagenes[0]?.tipo_envio_calculado || 'recordatorio_proximo';
+
+        console.log('🚀 Creando sesión de recordatorios en cola...');
+        const response = await fetch(API_ENVIOS_BASE, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'crear_sesion_cola',
+                tipo_envio: tipoEnvioSesion,
+                clientes: clientesConImagenes,
+                configuracion: {
+                    creado_desde: 'frontend_recordatorios',
+                    timestamp: new Date().toISOString()
+                }
+            })
+        });
+
+        const data = await response.json();
+
+        if (progressBar) {
+            progressBar.style.width = '100%';
+        }
+
+        if (data.success) {
+            const sesionId = data.data.sesion_id;
+            const trabajos = data.data.trabajos_agregados;
+
+            console.log(`✅ Sesión de recordatorios creada: #${sesionId} con ${trabajos} trabajos`);
+
+            if (progressText) {
+                progressText.textContent = '✅ Recordatorios agregados a la cola';
+            }
+
+            alert(`✅ ¡Recordatorios agregados a la cola exitosamente!
+
+📦 Sesión: #${sesionId}
+📋 Recordatorios: ${trabajos}
+
+Los envíos serán procesados automáticamente en segundo plano.
+Puedes cerrar el navegador sin preocupación.
+
+Ve al historial de envíos para monitorear el progreso.`);
+
+            // Redirigir al historial después de 3 segundos
+            setTimeout(() => {
+                window.location.href = 'historial.html?sesion=' + sesionId;
+            }, 3000);
+
+        } else {
+            console.error('❌ Error creando sesión de recordatorios:', data.error);
+            alert('❌ Error al crear sesión en cola: ' + (data.error || 'Error desconocido'));
+        }
+
+    } catch (error) {
+        console.error('❌ Error:', error);
+        alert('❌ Error de conexión: ' + error.message);
+    } finally {
+        // Restaurar botones después de 3 segundos
+        setTimeout(() => {
+            if (progressBar) {
+                progressBar.style.width = '0%';
+                progressText.textContent = '';
+            }
+            document.getElementById('btnEnviarRecordatorios').disabled = clientesNotificar.length === 0;
+        }, 3000);
     }
 }
