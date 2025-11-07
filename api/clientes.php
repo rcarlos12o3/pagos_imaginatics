@@ -76,7 +76,7 @@ function handleGet($database) {
 }
 
 /**
- * Obtener lista de clientes
+ * Obtener lista de clientes (ADAPTADO A MULTI-SERVICIO)
  */
 function getClientes($database) {
     try {
@@ -84,30 +84,30 @@ function getClientes($database) {
         $limit = $_GET['limit'] ?? 50;
         $offset = ($page - 1) * $limit;
 
-        // Consulta con paginación y verificación de pagos
-        $sql = "SELECT c.*,
-                DATEDIFF(c.fecha_vencimiento, CURDATE()) as dias_restantes,
-                (SELECT MAX(hp.fecha_pago) FROM historial_pagos hp WHERE hp.cliente_id = c.id) as ultimo_pago,
-                CASE
-                    -- Si existe un pago en el periodo actual, está PAGADO
-                    WHEN EXISTS (
-                        SELECT 1 FROM historial_pagos hp 
-                        WHERE hp.cliente_id = c.id 
-                        AND (
-                            (c.tipo_servicio = 'mensual' AND hp.fecha_pago >= DATE_SUB(c.fecha_vencimiento, INTERVAL 1 MONTH))
-                            OR (c.tipo_servicio = 'trimestral' AND hp.fecha_pago >= DATE_SUB(c.fecha_vencimiento, INTERVAL 3 MONTH))
-                            OR (c.tipo_servicio = 'semestral' AND hp.fecha_pago >= DATE_SUB(c.fecha_vencimiento, INTERVAL 6 MONTH))
-                            OR ((c.tipo_servicio = 'anual' OR c.tipo_servicio IS NULL) AND hp.fecha_pago >= DATE_SUB(c.fecha_vencimiento, INTERVAL 12 MONTH))
-                        )
-                    ) THEN 'PAGADO'
-                    WHEN DATEDIFF(c.fecha_vencimiento, CURDATE()) < 0 THEN 'VENCIDO'
-                    WHEN DATEDIFF(c.fecha_vencimiento, CURDATE()) = 0 THEN 'VENCE_HOY'
-                    WHEN DATEDIFF(c.fecha_vencimiento, CURDATE()) <= 3 THEN 'POR_VENCER'
-                    ELSE 'AL_DIA'
-                END as estado_vencimiento
+        // Consulta adaptada: usar resumen financiero de servicios contratados
+        $sql = "SELECT
+                    c.*,
+                    r.total_servicios,
+                    r.servicios_activos,
+                    r.servicios_suspendidos,
+                    r.monto_servicios_activos,
+                    r.proximo_vencimiento,
+                    r.facturas_pendientes,
+                    r.saldo_pendiente,
+                    DATEDIFF(r.proximo_vencimiento, CURDATE()) as dias_restantes,
+                    (SELECT MAX(hp.fecha_pago) FROM historial_pagos hp WHERE hp.cliente_id = c.id) as ultimo_pago,
+                    CASE
+                        WHEN r.servicios_activos = 0 THEN 'SIN_SERVICIOS'
+                        WHEN r.proximo_vencimiento IS NULL THEN 'SIN_SERVICIOS'
+                        WHEN DATEDIFF(r.proximo_vencimiento, CURDATE()) < 0 THEN 'VENCIDO'
+                        WHEN DATEDIFF(r.proximo_vencimiento, CURDATE()) = 0 THEN 'VENCE_HOY'
+                        WHEN DATEDIFF(r.proximo_vencimiento, CURDATE()) <= 3 THEN 'POR_VENCER'
+                        ELSE 'AL_DIA'
+                    END as estado_vencimiento
                 FROM clientes c
+                LEFT JOIN v_resumen_financiero_cliente r ON c.id = r.cliente_id
                 WHERE c.activo = TRUE
-                ORDER BY c.fecha_vencimiento ASC, c.fecha_creacion DESC
+                ORDER BY r.proximo_vencimiento ASC, c.fecha_creacion DESC
                 LIMIT ? OFFSET ?";
 
         $clientes = $database->fetchAll($sql, [$limit, $offset]);
@@ -132,7 +132,7 @@ function getClientes($database) {
 }
 
 /**
- * Obtener un cliente específico
+ * Obtener un cliente específico (ADAPTADO A MULTI-SERVICIO)
  */
 function getCliente($database, $id) {
     if (!$id) {
@@ -140,33 +140,29 @@ function getCliente($database, $id) {
     }
 
     try {
-        $sql = "SELECT c.*,
-                DATEDIFF(c.fecha_vencimiento, CURDATE()) as dias_restantes,
-                (SELECT MAX(hp.fecha_pago) FROM historial_pagos hp WHERE hp.cliente_id = c.id) as ultimo_pago,
-                CASE
-                    -- Si existe un pago en el periodo actual, está PAGADO
-                    WHEN EXISTS (
-                        SELECT 1 FROM historial_pagos hp 
-                        WHERE hp.cliente_id = c.id 
-                        AND (
-                            (c.tipo_servicio = 'mensual' AND hp.fecha_pago >= DATE_SUB(c.fecha_vencimiento, INTERVAL 1 MONTH))
-                            OR (c.tipo_servicio = 'trimestral' AND hp.fecha_pago >= DATE_SUB(c.fecha_vencimiento, INTERVAL 3 MONTH))
-                            OR (c.tipo_servicio = 'semestral' AND hp.fecha_pago >= DATE_SUB(c.fecha_vencimiento, INTERVAL 6 MONTH))
-                            OR ((c.tipo_servicio = 'anual' OR c.tipo_servicio IS NULL) AND hp.fecha_pago >= DATE_SUB(c.fecha_vencimiento, INTERVAL 12 MONTH))
-                        )
-                    ) THEN 'PAGADO'
-                    WHEN DATEDIFF(c.fecha_vencimiento, CURDATE()) < 0 THEN 'VENCIDO'
-                    WHEN DATEDIFF(c.fecha_vencimiento, CURDATE()) = 0 THEN 'VENCE_HOY'
-                    WHEN DATEDIFF(c.fecha_vencimiento, CURDATE()) <= 3 THEN 'POR_VENCER'
-                    ELSE 'AL_DIA'
-                END as estado_vencimiento
+        // Obtener datos básicos del cliente
+        $sql = "SELECT c.*, r.*
                 FROM clientes c
+                LEFT JOIN v_resumen_financiero_cliente r ON c.id = r.cliente_id
                 WHERE c.id = ? AND c.activo = TRUE";
 
         $cliente = $database->fetch($sql, [$id]);
 
         if (!$cliente) {
             jsonResponse(['success' => false, 'error' => 'Cliente no encontrado'], 404);
+        }
+
+        // Obtener servicios contratados del cliente
+        $servicios = $database->fetchAll(
+            "SELECT * FROM v_servicios_cliente WHERE cliente_id = ? ORDER BY fecha_vencimiento ASC",
+            [$id]
+        );
+
+        // Decodificar configuración JSON de cada servicio
+        foreach ($servicios as &$servicio) {
+            if ($servicio['configuracion']) {
+                $servicio['configuracion'] = json_decode($servicio['configuracion'], true);
+            }
         }
 
         // Obtener historial de envíos
@@ -181,6 +177,7 @@ function getCliente($database, $id) {
             [$id]
         );
 
+        $cliente['servicios_contratados'] = $servicios;
         $cliente['historial_envios'] = $envios;
         $cliente['historial_pagos'] = $pagos;
 
@@ -715,7 +712,7 @@ function getConfiguracionWhatsApp($database) {
 }
 
 /**
- * Registrar pago de un cliente
+ * Registrar pago de un cliente (ADAPTADO A MULTI-SERVICIO)
  */
 function registrarPago($database, $input) {
     try {
@@ -732,6 +729,9 @@ function registrarPago($database, $input) {
         $numeroOperacion = $input['numero_operacion'] ?? null;
         $banco = $input['banco'] ?? null;
         $observaciones = $input['observaciones'] ?? null;
+
+        // NUEVO: servicios_pagados es un array de IDs de servicios_contratados
+        $serviciosPagados = $input['servicios_pagados'] ?? [];
 
         // Validar que el cliente existe
         $cliente = $database->fetch("SELECT * FROM clientes WHERE id = ? AND activo = TRUE", [$clienteId]);
@@ -752,29 +752,50 @@ function registrarPago($database, $input) {
 
         $database->beginTransaction();
 
-        // Registrar el pago
+        // Si no se especificaron servicios, buscar servicios activos del cliente
+        if (empty($serviciosPagados)) {
+            $servicios = $database->fetchAll(
+                "SELECT id, periodo_facturacion, fecha_vencimiento
+                 FROM servicios_contratados
+                 WHERE cliente_id = ? AND estado = 'activo'
+                 ORDER BY fecha_vencimiento ASC",
+                [$clienteId]
+            );
+            $serviciosPagados = array_column($servicios, 'id');
+        }
+
+        // Registrar el pago con servicios pagados
         $pagoId = $database->insert(
-            "INSERT INTO historial_pagos (cliente_id, monto_pagado, fecha_pago, metodo_pago, numero_operacion, banco, observaciones, registrado_por) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'Sistema')",
-            [$clienteId, $montoPagado, $fechaPago, $metodoPago, $numeroOperacion, $banco, $observaciones]
+            "INSERT INTO historial_pagos (
+                cliente_id, monto_pagado, fecha_pago, metodo_pago,
+                numero_operacion, banco, observaciones, registrado_por,
+                servicios_pagados
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                $clienteId, $montoPagado, $fechaPago, $metodoPago,
+                $numeroOperacion, $banco, $observaciones, 'Sistema',
+                json_encode($serviciosPagados)
+            ]
         );
 
-        // Usar fecha personalizada si se proporciona, sino calcular automáticamente
-        if (!empty($input['nueva_fecha_vencimiento'])) {
-            // Validar formato de fecha personalizada
-            $fechaPersonalizada = DateTime::createFromFormat('Y-m-d', $input['nueva_fecha_vencimiento']);
-            if (!$fechaPersonalizada) {
-                throw new Exception('Formato de fecha de vencimiento inválido');
+        // Actualizar cada servicio pagado
+        $serviciosActualizados = [];
+        foreach ($serviciosPagados as $servicioId) {
+            // Obtener datos del servicio
+            $servicio = $database->fetch(
+                "SELECT * FROM servicios_contratados WHERE id = ? AND cliente_id = ?",
+                [$servicioId, $clienteId]
+            );
+
+            if (!$servicio) {
+                continue; // Saltar si el servicio no existe o no pertenece al cliente
             }
-            $nuevaFechaVencimiento = $input['nueva_fecha_vencimiento'];
-        } else {
-            // Calcular nueva fecha de vencimiento basada en la fecha actual de vencimiento
-            // Se mantiene el día pero se avanza al siguiente periodo
-            $fechaVencimientoActual = new DateTime($cliente['fecha_vencimiento']);
-            $tipoServicio = $cliente['tipo_servicio'] ?? 'anual';
-            
-            // Añadir el periodo correspondiente a la fecha de vencimiento actual
-            switch ($tipoServicio) {
+
+            // Calcular nueva fecha de vencimiento
+            $fechaVencimientoActual = new DateTime($servicio['fecha_vencimiento']);
+            $periodo = $servicio['periodo_facturacion'];
+
+            switch ($periodo) {
                 case 'mensual':
                     $fechaVencimientoActual->add(new DateInterval('P1M'));
                     break;
@@ -789,24 +810,35 @@ function registrarPago($database, $input) {
                     $fechaVencimientoActual->add(new DateInterval('P1Y'));
                     break;
             }
-            
+
             $nuevaFechaVencimiento = $fechaVencimientoActual->format('Y-m-d');
+
+            // Actualizar el servicio
+            $database->query(
+                "UPDATE servicios_contratados
+                 SET fecha_vencimiento = ?,
+                     fecha_ultima_factura = ?,
+                     fecha_proximo_pago = ?,
+                     estado = 'activo',
+                     fecha_actualizacion = NOW()
+                 WHERE id = ?",
+                [$nuevaFechaVencimiento, $fechaPago, $nuevaFechaVencimiento, $servicioId]
+            );
+
+            $serviciosActualizados[] = [
+                'servicio_id' => $servicioId,
+                'nueva_fecha_vencimiento' => $nuevaFechaVencimiento
+            ];
         }
-        
-        // Actualizar la fecha de vencimiento del cliente
-        $database->query(
-            "UPDATE clientes SET fecha_vencimiento = ?, fecha_actualizacion = NOW() WHERE id = ?",
-            [$nuevaFechaVencimiento, $clienteId]
-        );
 
         $database->commit();
 
         // Log del registro de pago
-        $database->log('info', 'pagos', 'Pago registrado exitosamente', [
+        $database->log('info', 'pagos', 'Pago registrado exitosamente (multi-servicio)', [
             'cliente_id' => $clienteId,
             'monto' => $montoPagado,
             'metodo' => $metodoPago,
-            'nueva_fecha_vencimiento' => $nuevaFechaVencimiento
+            'servicios_actualizados' => count($serviciosActualizados)
         ]);
 
         jsonResponse([
@@ -814,7 +846,7 @@ function registrarPago($database, $input) {
             'message' => 'Pago registrado exitosamente',
             'data' => [
                 'pago_id' => $pagoId,
-                'nueva_fecha_vencimiento' => $nuevaFechaVencimiento
+                'servicios_actualizados' => $serviciosActualizados
             ]
         ]);
 
