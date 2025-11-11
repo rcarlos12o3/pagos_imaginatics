@@ -225,8 +225,9 @@ function actualizarListaClientes(clientesFiltrados = null) {
                 <div><strong>WhatsApp:</strong> ${cliente.whatsapp}</div>
                 <div><strong>Servicio:</strong> <span class="tipo-servicio">${cliente.tipo_servicio || 'anual'}</span></div>
             </div>
-            <div class="client-actions">
-                <button class="btn-detalle" onclick="event.stopPropagation(); verDetalleCliente(${cliente.id})">📊 Ver Detalle</button>
+            <div class="client-actions" style="display: flex; gap: 8px; margin-top: 10px;">
+                <button class="btn-detalle" onclick="event.stopPropagation(); verDetalleCliente(${cliente.id})" style="flex: 1; padding: 6px 10px; background: #2581c4; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; transition: all 0.3s;">📊 Ver Detalle</button>
+                <button class="btn-servicios" onclick="event.stopPropagation(); ServiciosUI.mostrarServiciosCliente(${cliente.id})" style="flex: 1; padding: 6px 10px; background: #f39325; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; transition: all 0.3s;">🛠️ Servicios</button>
             </div>
         </div>
         `;

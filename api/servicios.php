@@ -100,12 +100,12 @@ function getCatalogo($database) {
         $servicios = $database->fetchAll($sql, $params);
 
         // Decodificar JSON de periodos_disponibles y configuracion_default
-        foreach ($servicios as &$servicio) {
-            if ($servicio['periodos_disponibles']) {
-                $servicio['periodos_disponibles'] = json_decode($servicio['periodos_disponibles'], true);
+        foreach ($servicios as $key => $servicio) {
+            if (!empty($servicio['periodos_disponibles'])) {
+                $servicios[$key]['periodos_disponibles'] = json_decode($servicio['periodos_disponibles'], true);
             }
-            if ($servicio['configuracion_default']) {
-                $servicio['configuracion_default'] = json_decode($servicio['configuracion_default'], true);
+            if (!empty($servicio['configuracion_default'])) {
+                $servicios[$key]['configuracion_default'] = json_decode($servicio['configuracion_default'], true);
             }
         }
 

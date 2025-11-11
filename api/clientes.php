@@ -70,6 +70,12 @@ function handleGet($database) {
         case 'estadisticas':
             getEstadisticas($database);
             break;
+        case 'historial_servicio':
+            getHistorialPagosServicio($database, $_GET['contrato_id'] ?? null);
+            break;
+        case 'dashboard_pagos':
+            getDashboardPagosPendientes($database);
+            break;
         default:
             jsonResponse(['success' => false, 'error' => 'Acción no válida'], 400);
     }
@@ -882,5 +888,241 @@ function calcularNuevaFechaVencimiento($fechaPago, $tipoServicio) {
     }
     
     return $fecha->format('Y-m-d');
+}
+
+/**
+ * Obtener historial de pagos de un servicio específico
+ */
+function getHistorialPagosServicio($database, $contrato_id) {
+    if (!$contrato_id) {
+        jsonResponse(['success' => false, 'error' => 'ID de contrato requerido'], 400);
+    }
+
+    try {
+        // Verificar que el servicio existe
+        $servicio = $database->fetch(
+            "SELECT sc.*, cs.nombre as servicio_nombre, c.razon_social, c.ruc
+             FROM servicios_contratados sc
+             JOIN catalogo_servicios cs ON sc.servicio_id = cs.id
+             JOIN clientes c ON sc.cliente_id = c.id
+             WHERE sc.id = ?",
+            [$contrato_id]
+        );
+
+        if (!$servicio) {
+            jsonResponse(['success' => false, 'error' => 'Servicio no encontrado'], 404);
+        }
+
+        // Obtener todos los pagos que incluyen este servicio
+        $pagos = $database->fetchAll(
+            "SELECT
+                hp.id,
+                hp.monto_pagado,
+                hp.fecha_pago,
+                hp.metodo_pago,
+                hp.numero_operacion,
+                hp.banco,
+                hp.observaciones,
+                hp.registrado_por,
+                hp.fecha_registro,
+                hp.servicios_pagados
+             FROM historial_pagos hp
+             WHERE hp.cliente_id = ?
+             AND JSON_CONTAINS(hp.servicios_pagados, ?, '$')
+             ORDER BY hp.fecha_pago DESC",
+            [$servicio['cliente_id'], $contrato_id]
+        );
+
+        // Decodificar servicios_pagados para cada pago
+        foreach ($pagos as &$pago) {
+            if ($pago['servicios_pagados']) {
+                $pago['servicios_pagados'] = json_decode($pago['servicios_pagados'], true);
+            }
+        }
+
+        // Calcular estadísticas
+        $total_pagado = 0;
+        $cantidad_pagos = count($pagos);
+
+        foreach ($pagos as $pago) {
+            // Si el pago incluye múltiples servicios, calcular proporción
+            if (is_array($pago['servicios_pagados']) && count($pago['servicios_pagados']) > 1) {
+                // Dividir el monto entre los servicios pagados
+                $total_pagado += $pago['monto_pagado'] / count($pago['servicios_pagados']);
+            } else {
+                $total_pagado += $pago['monto_pagado'];
+            }
+        }
+
+        $promedio_pago = $cantidad_pagos > 0 ? $total_pagado / $cantidad_pagos : 0;
+
+        jsonResponse([
+            'success' => true,
+            'data' => [
+                'servicio' => $servicio,
+                'pagos' => $pagos,
+                'estadisticas' => [
+                    'total_pagado' => round($total_pagado, 2),
+                    'cantidad_pagos' => $cantidad_pagos,
+                    'promedio_pago' => round($promedio_pago, 2),
+                    'primer_pago' => $cantidad_pagos > 0 ? $pagos[count($pagos) - 1]['fecha_pago'] : null,
+                    'ultimo_pago' => $cantidad_pagos > 0 ? $pagos[0]['fecha_pago'] : null
+                ]
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        $database->log('error', 'historial_servicio', 'Error obteniendo historial: ' . $e->getMessage());
+        jsonResponse(['success' => false, 'error' => 'Error interno: ' . $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Dashboard de Pagos Pendientes
+ * Obtiene servicios próximos a vencer, vencidos y métricas financieras
+ */
+function getDashboardPagosPendientes($database) {
+    try {
+        $filtro = $_GET['filtro'] ?? 'todos'; // todos, proximo_vencer, vencido, muy_vencido
+        $servicio_id = $_GET['servicio_id'] ?? null;
+        $busqueda = $_GET['busqueda'] ?? '';
+
+        // Fechas de referencia
+        $hoy = date('Y-m-d');
+        $proximos_7_dias = date('Y-m-d', strtotime('+7 days'));
+        $hace_30_dias = date('Y-m-d', strtotime('-30 days'));
+
+        // Query base
+        $query = "
+            SELECT
+                sc.id as contrato_id,
+                sc.cliente_id,
+                c.razon_social,
+                c.ruc,
+                c.whatsapp,
+                cs.nombre as servicio_nombre,
+                cs.categoria as servicio_categoria,
+                sc.precio,
+                sc.moneda,
+                sc.periodo_facturacion,
+                sc.fecha_vencimiento,
+                sc.estado,
+                sc.notas,
+                DATEDIFF(sc.fecha_vencimiento, CURDATE()) as dias_para_vencer,
+                CASE
+                    WHEN sc.fecha_vencimiento < CURDATE() AND DATEDIFF(CURDATE(), sc.fecha_vencimiento) > 30 THEN 'muy_vencido'
+                    WHEN sc.fecha_vencimiento < CURDATE() THEN 'vencido'
+                    WHEN DATEDIFF(sc.fecha_vencimiento, CURDATE()) <= 7 THEN 'proximo_vencer'
+                    ELSE 'al_dia'
+                END as urgencia
+            FROM servicios_contratados sc
+            JOIN clientes c ON sc.cliente_id = c.id
+            JOIN catalogo_servicios cs ON sc.servicio_id = cs.id
+            WHERE sc.estado IN ('activo', 'vencido')
+            AND c.activo = TRUE
+        ";
+
+        $params = [];
+
+        // Aplicar filtros
+        if ($filtro !== 'todos') {
+            if ($filtro === 'proximo_vencer') {
+                $query .= " AND sc.fecha_vencimiento BETWEEN ? AND ? AND sc.fecha_vencimiento >= CURDATE()";
+                $params[] = $hoy;
+                $params[] = $proximos_7_dias;
+            } elseif ($filtro === 'vencido') {
+                $query .= " AND sc.fecha_vencimiento < ? AND DATEDIFF(?, sc.fecha_vencimiento) <= 30";
+                $params[] = $hoy;
+                $params[] = $hoy;
+            } elseif ($filtro === 'muy_vencido') {
+                $query .= " AND sc.fecha_vencimiento < ? AND DATEDIFF(?, sc.fecha_vencimiento) > 30";
+                $params[] = $hoy;
+                $params[] = $hoy;
+            }
+        }
+
+        // Filtro por servicio
+        if ($servicio_id) {
+            $query .= " AND sc.servicio_id = ?";
+            $params[] = $servicio_id;
+        }
+
+        // Búsqueda por cliente
+        if ($busqueda) {
+            $query .= " AND (c.razon_social LIKE ? OR c.ruc LIKE ?)";
+            $params[] = "%{$busqueda}%";
+            $params[] = "%{$busqueda}%";
+        }
+
+        $query .= " ORDER BY
+            CASE
+                WHEN sc.fecha_vencimiento < CURDATE() THEN 1
+                WHEN DATEDIFF(sc.fecha_vencimiento, CURDATE()) <= 7 THEN 2
+                ELSE 3
+            END,
+            sc.fecha_vencimiento ASC";
+
+        $servicios = $database->fetchAll($query, $params);
+
+        // Calcular métricas
+        $metricas = $database->fetch("
+            SELECT
+                COUNT(CASE WHEN sc.fecha_vencimiento BETWEEN ? AND ? AND sc.fecha_vencimiento >= CURDATE() THEN 1 END) as proximos_vencer,
+                COUNT(CASE WHEN sc.fecha_vencimiento < ? AND DATEDIFF(?, sc.fecha_vencimiento) <= 30 THEN 1 END) as vencidos,
+                COUNT(CASE WHEN sc.fecha_vencimiento < ? AND DATEDIFF(?, sc.fecha_vencimiento) > 30 THEN 1 END) as muy_vencidos,
+                SUM(CASE WHEN sc.fecha_vencimiento < ? THEN sc.precio ELSE 0 END) as monto_vencido_pen,
+                SUM(CASE WHEN sc.fecha_vencimiento BETWEEN ? AND ? AND sc.moneda = 'PEN' THEN sc.precio ELSE 0 END) as monto_proximo_pen,
+                SUM(CASE WHEN sc.fecha_vencimiento < ? AND sc.moneda = 'USD' THEN sc.precio ELSE 0 END) as monto_vencido_usd,
+                SUM(CASE WHEN sc.fecha_vencimiento BETWEEN ? AND ? AND sc.moneda = 'USD' THEN sc.precio ELSE 0 END) as monto_proximo_usd,
+                COUNT(DISTINCT sc.cliente_id) as clientes_afectados
+            FROM servicios_contratados sc
+            JOIN clientes c ON sc.cliente_id = c.id
+            WHERE sc.estado IN ('activo', 'vencido')
+            AND c.activo = TRUE
+        ", [
+            $hoy, $proximos_7_dias,  // proximos_vencer
+            $hoy, $hoy,              // vencidos
+            $hoy, $hoy,              // muy_vencidos
+            $hoy,                    // monto_vencido_pen
+            $hoy, $proximos_7_dias,  // monto_proximo_pen
+            $hoy,                    // monto_vencido_usd
+            $hoy, $proximos_7_dias   // monto_proximo_usd
+        ]);
+
+        // Listado de servicios para filtro
+        $catalogo = $database->fetchAll("
+            SELECT DISTINCT cs.id, cs.nombre, cs.categoria
+            FROM catalogo_servicios cs
+            JOIN servicios_contratados sc ON cs.id = sc.servicio_id
+            WHERE sc.estado IN ('activo', 'vencido')
+            ORDER BY cs.nombre
+        ");
+
+        jsonResponse([
+            'success' => true,
+            'data' => [
+                'servicios' => $servicios,
+                'metricas' => [
+                    'proximos_vencer' => (int)$metricas['proximos_vencer'],
+                    'vencidos' => (int)$metricas['vencidos'],
+                    'muy_vencidos' => (int)$metricas['muy_vencidos'],
+                    'clientes_afectados' => (int)$metricas['clientes_afectados'],
+                    'monto_vencido' => [
+                        'PEN' => round((float)$metricas['monto_vencido_pen'], 2),
+                        'USD' => round((float)$metricas['monto_vencido_usd'], 2)
+                    ],
+                    'monto_proximo' => [
+                        'PEN' => round((float)$metricas['monto_proximo_pen'], 2),
+                        'USD' => round((float)$metricas['monto_proximo_usd'], 2)
+                    ]
+                ],
+                'catalogo' => $catalogo
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        $database->log('error', 'dashboard_pagos', 'Error: ' . $e->getMessage());
+        jsonResponse(['success' => false, 'error' => 'Error interno: ' . $e->getMessage()], 500);
+    }
 }
 ?>

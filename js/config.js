@@ -40,6 +40,9 @@ let clientesNotificar = [];
 const API_RUC_BASE = "api/consultar_ruc.php?ruc=";
 const API_CLIENTES_BASE = "api/clientes.php";
 const API_ENVIOS_BASE = "api/envios.php";
+const API_SERVICIOS_BASE = "api/servicios.php";
+const API_ENVIOS_MULTISERVICIO_BASE = "api/envios_multiservicio.php";
+const API_REPORTES_BASE = "api/reportes.php";
 
 // Configuracion de la aplicacion
 const CONFIG = {

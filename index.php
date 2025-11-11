@@ -704,12 +704,14 @@ require_once 'auth/session_check.php';
             min-width: 120px;
         }
     </style>
+    <link rel="stylesheet" href="css/servicios.css">
 </head>
 
 <body>
     <div class="container">
         <div class="header">
             <div class="nav-buttons">
+                <a href="#" onclick="DashboardPagos.abrir(); return false;" class="nav-btn">📊 Dashboard de Pagos</a>
                 <a href="historial_envios.php" class="nav-btn">📋 Historial de Envíos</a>
                 <a href="pagos.php" class="nav-btn">💳 Gestión de Pagos</a>
                 <span class="nav-btn" style="background: rgba(255,255,255,0.1);">👤 <?php echo $_SESSION['nombre'] ?? 'Usuario'; ?></span>
@@ -949,6 +951,8 @@ require_once 'auth/session_check.php';
     <script src="js/database.js"></script>
     <script src="js/whatsapp.js"></script>
     <script src="js/csv.js"></script>
+    <script src="js/servicios.js"></script>
+    <script src="js/dashboard_pagos.js"></script>
     <script src="js/main.js"></script>
 </body>
 
