@@ -49,6 +49,9 @@ function handleGet($database) {
         case 'list':
             getClientes($database);
             break;
+        case 'list_all':
+            getClientesAll($database);
+            break;
         case 'get':
             getCliente($database, $_GET['id'] ?? null);
             break;
@@ -76,6 +79,9 @@ function handleGet($database) {
         case 'dashboard_pagos':
             getDashboardPagosPendientes($database);
             break;
+        case 'analizar_envios_pendientes':
+            analizarEnviosPendientes($database);
+            break;
         default:
             jsonResponse(['success' => false, 'error' => 'Acción no válida'], 400);
     }
@@ -97,7 +103,10 @@ function getClientes($database) {
                     r.servicios_activos,
                     r.servicios_suspendidos,
                     r.monto_servicios_activos,
+                    r.monto_pen,
+                    r.monto_usd,
                     r.proximo_vencimiento,
+                    r.periodo_proximo_vencimiento,
                     r.facturas_pendientes,
                     r.saldo_pendiente,
                     DATEDIFF(r.proximo_vencimiento, CURDATE()) as dias_restantes,
@@ -120,6 +129,61 @@ function getClientes($database) {
 
         // Contar total
         $total = $database->fetch("SELECT COUNT(*) as total FROM clientes WHERE activo = TRUE")['total'];
+
+        jsonResponse([
+            'success' => true,
+            'data' => $clientes,
+            'pagination' => [
+                'page' => (int)$page,
+                'limit' => (int)$limit,
+                'total' => (int)$total,
+                'pages' => ceil($total / $limit)
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        throw $e;
+    }
+}
+
+/**
+ * Obtener lista de TODOS los clientes (incluyendo deshabilitados)
+ */
+function getClientesAll($database) {
+    try {
+        $page = $_GET['page'] ?? 1;
+        $limit = $_GET['limit'] ?? 1000; // Límite alto para mostrar todos
+        $offset = ($page - 1) * $limit;
+
+        // Consulta SIN filtro de activo
+        $sql = "SELECT
+                    c.*,
+                    r.total_servicios,
+                    r.servicios_activos,
+                    r.servicios_suspendidos,
+                    r.monto_servicios_activos,
+                    r.proximo_vencimiento,
+                    r.facturas_pendientes,
+                    r.saldo_pendiente,
+                    DATEDIFF(r.proximo_vencimiento, CURDATE()) as dias_restantes,
+                    (SELECT MAX(hp.fecha_pago) FROM historial_pagos hp WHERE hp.cliente_id = c.id) as ultimo_pago,
+                    CASE
+                        WHEN r.servicios_activos = 0 THEN 'SIN_SERVICIOS'
+                        WHEN r.proximo_vencimiento IS NULL THEN 'SIN_SERVICIOS'
+                        WHEN DATEDIFF(r.proximo_vencimiento, CURDATE()) < 0 THEN 'VENCIDO'
+                        WHEN DATEDIFF(r.proximo_vencimiento, CURDATE()) = 0 THEN 'VENCE_HOY'
+                        WHEN DATEDIFF(r.proximo_vencimiento, CURDATE()) <= 3 THEN 'POR_VENCER'
+                        ELSE 'AL_DIA'
+                    END as estado_vencimiento
+                FROM clientes c
+                LEFT JOIN v_resumen_financiero_cliente r ON c.id = r.cliente_id
+                ORDER BY c.activo DESC, r.proximo_vencimiento ASC, c.fecha_creacion DESC
+                LIMIT ? OFFSET ?";
+
+        $clientes = $database->fetchAll($sql, [$limit, $offset]);
+
+        // Contar total (incluyendo deshabilitados)
+        $total = $database->fetch("SELECT COUNT(*) as total FROM clientes")['total'];
 
         jsonResponse([
             'success' => true,
@@ -378,11 +442,25 @@ function getEstadisticas($database) {
  * Manejar peticiones POST (crear cliente)
  */
 function handlePost($database, $input) {
-    $action = $_GET['action'] ?? 'create';
-    
+    // Si se envía con FormData, los datos vienen en $_POST
+    if (empty($input) && !empty($_POST)) {
+        $input = $_POST;
+    }
+
+    $action = $input['action'] ?? $_GET['action'] ?? 'create';
+
     switch ($action) {
         case 'create':
             createCliente($database, $input);
+            break;
+        case 'update':
+            updateCliente($database, $input);
+            break;
+        case 'delete':
+            deleteCliente($database, $input);
+            break;
+        case 'enable':
+            enableCliente($database, $input);
             break;
         case 'registrar_pago':
             registrarPago($database, $input);
@@ -396,8 +474,8 @@ function handlePost($database, $input) {
  * Crear nuevo cliente
  */
 function createCliente($database, $input) {
-    // Validar campos requeridos
-    $required = ['ruc', 'razon_social', 'monto', 'fecha_vencimiento', 'whatsapp'];
+    // Validar campos requeridos (solo datos básicos del cliente)
+    $required = ['ruc', 'razon_social', 'whatsapp'];
     $errors = validateInput($input, $required);
 
     if (!empty($errors)) {
@@ -414,17 +492,6 @@ function createCliente($database, $input) {
     $whatsappValidation = validateWhatsApp($input['whatsapp']);
     if (!$whatsappValidation['valid']) {
         jsonResponse(['success' => false, 'error' => $whatsappValidation['message']], 400);
-    }
-
-    // Validar monto
-    if (!is_numeric($input['monto']) || $input['monto'] <= 0) {
-        jsonResponse(['success' => false, 'error' => 'El monto debe ser un número positivo'], 400);
-    }
-
-    // Agregar validación del tipo_servicio
-        $tiposPermitidos = ['mensual', 'trimestral', 'semestral', 'anual'];
-    if (isset($input['tipo_servicio']) && !in_array($input['tipo_servicio'], $tiposPermitidos)) {
-        jsonResponse(['success' => false, 'error' => 'Tipo de servicio debe ser: mensual, trimestral, semestral o anual'], 400);
     }
 
     try {
@@ -444,20 +511,16 @@ function createCliente($database, $input) {
                 "UPDATE clientes SET
                     activo = TRUE,
                     razon_social = ?,
-                    monto = ?,
-                    fecha_vencimiento = ?,
                     whatsapp = ?,
-                    tipo_servicio = ?,
+                    email = ?,
                     direccion = ?,
                     estado_sunat = ?,
                     fecha_actualizacion = NOW()
                 WHERE id = ?",
                 [
                     trim($input['razon_social']),
-                    $input['monto'],
-                    $input['fecha_vencimiento'],
                     $whatsappValidation['numero'],
-                    $input['tipo_servicio'] ?? 'anual',
+                    $input['email'] ?? null,
                     $input['direccion'] ?? null,
                     $input['estado_sunat'] ?? null,
                     $existente['id']
@@ -489,17 +552,14 @@ function createCliente($database, $input) {
 
     // Si no existe, crear nuevo cliente
     $sql = "INSERT INTO clientes (
-                ruc, razon_social, monto, fecha_vencimiento, whatsapp, tipo_servicio,
-                direccion, estado_sunat
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                ruc, razon_social, whatsapp, email, direccion, estado_sunat
+            ) VALUES (?, ?, ?, ?, ?, ?)";
 
     $clienteId = $database->insert($sql, [
         $rucValidation['ruc'],
         trim($input['razon_social']),
-        $input['monto'],
-        $input['fecha_vencimiento'],
         $whatsappValidation['numero'],
-        $input['tipo_servicio'] ?? 'anual',
+        $input['email'] ?? null,
         $input['direccion'] ?? null,
         $input['estado_sunat'] ?? null
     ]);
@@ -528,6 +588,172 @@ function createCliente($database, $input) {
     }
     throw $e;
 }
+}
+
+/**
+ * Actualizar cliente existente (llamado desde POST)
+ */
+function updateCliente($database, $input) {
+    // Validar ID
+    if (!isset($input['id']) || empty($input['id'])) {
+        jsonResponse(['success' => false, 'error' => 'ID requerido'], 400);
+    }
+
+    // Validar campos requeridos (solo datos básicos)
+    $required = ['ruc', 'razon_social', 'whatsapp'];
+    $errors = validateInput($input, $required);
+
+    if (!empty($errors)) {
+        jsonResponse(['success' => false, 'errors' => $errors], 400);
+    }
+
+    // Validar RUC
+    $rucValidation = validateRUC($input['ruc']);
+    if (!$rucValidation['valid']) {
+        jsonResponse(['success' => false, 'error' => $rucValidation['message']], 400);
+    }
+
+    // Validar WhatsApp
+    $whatsappValidation = validateWhatsApp($input['whatsapp']);
+    if (!$whatsappValidation['valid']) {
+        jsonResponse(['success' => false, 'error' => $whatsappValidation['message']], 400);
+    }
+
+    try {
+        // Verificar que el cliente existe
+        $cliente = $database->fetch(
+            "SELECT * FROM clientes WHERE id = ? AND activo = TRUE",
+            [$input['id']]
+        );
+
+        if (!$cliente) {
+            jsonResponse(['success' => false, 'error' => 'Cliente no encontrado'], 404);
+        }
+
+        // Actualizar cliente
+        $sql = "UPDATE clientes SET
+                    ruc = ?,
+                    razon_social = ?,
+                    whatsapp = ?,
+                    email = ?,
+                    direccion = ?,
+                    fecha_actualizacion = NOW()
+                WHERE id = ?";
+
+        $database->query($sql, [
+            $rucValidation['ruc'],
+            trim($input['razon_social']),
+            $whatsappValidation['numero'],
+            $input['email'] ?? null,
+            $input['direccion'] ?? null,
+            $input['id']
+        ]);
+
+        // Log del sistema
+        $database->log('info', 'clientes', 'Cliente actualizado', [
+            'id' => $input['id'],
+            'ruc' => $rucValidation['ruc']
+        ]);
+
+        // Obtener cliente actualizado
+        $clienteActualizado = $database->fetch(
+            "SELECT * FROM clientes WHERE id = ?",
+            [$input['id']]
+        );
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Cliente actualizado exitosamente',
+            'data' => $clienteActualizado
+        ]);
+
+    } catch (Exception $e) {
+        throw $e;
+    }
+}
+
+/**
+ * Eliminar cliente (desactivar)
+ */
+function deleteCliente($database, $input) {
+    // Validar ID
+    if (!isset($input['id']) || empty($input['id'])) {
+        jsonResponse(['success' => false, 'error' => 'ID requerido'], 400);
+    }
+
+    try {
+        // Verificar que el cliente existe
+        $cliente = $database->fetch(
+            "SELECT * FROM clientes WHERE id = ? AND activo = TRUE",
+            [$input['id']]
+        );
+
+        if (!$cliente) {
+            jsonResponse(['success' => false, 'error' => 'Cliente no encontrado'], 404);
+        }
+
+        // Desactivar cliente (soft delete)
+        $database->query(
+            "UPDATE clientes SET activo = FALSE, fecha_actualizacion = NOW() WHERE id = ?",
+            [$input['id']]
+        );
+
+        // Log del sistema
+        $database->log('info', 'clientes', 'Cliente deshabilitado', [
+            'id' => $input['id'],
+            'ruc' => $cliente['ruc']
+        ]);
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Cliente deshabilitado exitosamente'
+        ]);
+
+    } catch (Exception $e) {
+        throw $e;
+    }
+}
+
+/**
+ * Habilitar cliente (reactivar después de soft delete)
+ */
+function enableCliente($database, $input) {
+    // Validar ID
+    if (!isset($input['id']) || empty($input['id'])) {
+        jsonResponse(['success' => false, 'error' => 'ID requerido'], 400);
+    }
+
+    try {
+        // Verificar que el cliente existe y está deshabilitado
+        $cliente = $database->fetch(
+            "SELECT * FROM clientes WHERE id = ? AND activo = FALSE",
+            [$input['id']]
+        );
+
+        if (!$cliente) {
+            jsonResponse(['success' => false, 'error' => 'Cliente no encontrado o ya está habilitado'], 404);
+        }
+
+        // Reactivar cliente
+        $database->query(
+            "UPDATE clientes SET activo = TRUE, fecha_actualizacion = NOW() WHERE id = ?",
+            [$input['id']]
+        );
+
+        // Log del sistema
+        $database->log('info', 'clientes', 'Cliente habilitado', [
+            'id' => $input['id'],
+            'ruc' => $cliente['ruc']
+        ]);
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Cliente habilitado exitosamente'
+        ]);
+
+    } catch (Exception $e) {
+        throw $e;
+    }
 }
 
 /**
@@ -1124,5 +1350,230 @@ function getDashboardPagosPendientes($database) {
         $database->log('error', 'dashboard_pagos', 'Error: ' . $e->getMessage());
         jsonResponse(['success' => false, 'error' => 'Error interno: ' . $e->getMessage()], 500);
     }
+}
+
+/**
+ * Analizar envíos pendientes según reglas de negocio
+ * Determina qué empresas deben recibir órdenes de pago según:
+ * - Periodicidad y ventana ideal de envío
+ * - Estado actual (dentro/fuera del plazo)
+ * - Órdenes atrasadas de periodos anteriores
+ */
+function analizarEnviosPendientes($database) {
+    try {
+        $hoy = new DateTime('now', new DateTimeZone('America/Lima'));
+
+        // Obtener todos los servicios activos con datos del cliente
+        $sql = "SELECT
+                    sc.id as contrato_id,
+                    sc.cliente_id,
+                    c.razon_social,
+                    c.ruc,
+                    c.whatsapp,
+                    sc.servicio_id,
+                    cs.nombre as servicio_nombre,
+                    sc.precio,
+                    sc.moneda,
+                    sc.periodo_facturacion,
+                    sc.fecha_inicio,
+                    sc.fecha_vencimiento,
+                    sc.fecha_ultima_factura,
+                    sc.estado,
+                    DATEDIFF(sc.fecha_vencimiento, CURDATE()) as dias_para_vencer
+                FROM servicios_contratados sc
+                JOIN clientes c ON sc.cliente_id = c.id
+                JOIN catalogo_servicios cs ON sc.servicio_id = cs.id
+                WHERE sc.estado = 'activo' AND c.activo = TRUE
+                ORDER BY dias_para_vencer ASC";
+
+        $servicios = $database->fetchAll($sql);
+
+        $resultados = [];
+
+        foreach ($servicios as $servicio) {
+            $analisis = analizarServicio($servicio, $hoy, $database);
+
+            // Solo incluir si está en ventana de envío o fuera del plazo (pero aún válido)
+            if ($analisis['debe_enviarse']) {
+                $resultados[] = $analisis;
+            }
+        }
+
+        jsonResponse([
+            'success' => true,
+            'data' => [
+                'servicios' => $resultados,
+                'total' => count($resultados),
+                'fecha_analisis' => $hoy->format('Y-m-d H:i:s')
+            ]
+        ]);
+
+    } catch (Exception $e) {
+        $database->log('error', 'analizar_envios', 'Error: ' . $e->getMessage());
+        jsonResponse(['success' => false, 'error' => 'Error interno: ' . $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Analizar un servicio individual y determinar si debe recibir orden
+ */
+function analizarServicio($servicio, $hoy, $database) {
+    $periodo = $servicio['periodo_facturacion'];
+    $fechaVencimiento = new DateTime($servicio['fecha_vencimiento'], new DateTimeZone('America/Lima'));
+    $fechaInicio = new DateTime($servicio['fecha_inicio'], new DateTimeZone('America/Lima'));
+
+    // Calcular días hasta el vencimiento
+    $diasHastaVencer = $fechaVencimiento->diff($hoy)->days;
+    if ($fechaVencimiento < $hoy) {
+        $diasHastaVencer = -$diasHastaVencer; // Negativo si ya venció
+    }
+
+    // Determinar días de anticipación según periodicidad
+    $diasAnticipacion = 0;
+    switch ($periodo) {
+        case 'mensual':
+            $diasAnticipacion = 4;
+            break;
+        case 'trimestral':
+            $diasAnticipacion = 7;
+            break;
+        case 'semestral':
+            $diasAnticipacion = 15;
+            break;
+        case 'anual':
+            $diasAnticipacion = 30;
+            break;
+    }
+
+    // Calcular fecha ideal de envío
+    $fechaIdealEnvio = clone $fechaVencimiento;
+    $fechaIdealEnvio->sub(new DateInterval("P{$diasAnticipacion}D"));
+
+    // Determinar estado
+    $estado = '';
+    $debeEnviarse = false;
+
+    if ($diasHastaVencer < 0) {
+        // Ya venció - SIEMPRE debe enviarse (es orden atrasada)
+        $estado = 'fuera_del_plazo';
+        $debeEnviarse = true;
+    } elseif ($hoy >= $fechaIdealEnvio && $hoy <= $fechaVencimiento) {
+        // Estamos dentro de la ventana ideal
+        $estado = 'dentro_del_plazo_ideal';
+        $debeEnviarse = true;
+    } elseif ($hoy > $fechaVencimiento) {
+        // Ya pasó el vencimiento (mismo caso que diasHastaVencer < 0)
+        $estado = 'fuera_del_plazo';
+        $debeEnviarse = true;
+    } else {
+        // Aún no llega la fecha ideal
+        $estado = 'pendiente';
+        $debeEnviarse = false;
+    }
+
+    // Verificar si ya se envió orden para este periodo
+    $yaEnviado = $database->fetch("
+        SELECT COUNT(*) as total
+        FROM envios_whatsapp
+        WHERE cliente_id = ?
+        AND tipo_envio = 'orden_pago'
+        AND fecha_envio >= ?
+        AND estado = 'enviado'
+    ", [$servicio['cliente_id'], $servicio['fecha_ultima_factura'] ?? $fechaInicio->format('Y-m-d')]);
+
+    if ($yaEnviado && $yaEnviado['total'] > 0) {
+        $debeEnviarse = false;
+        $estado = 'ya_enviado';
+    }
+
+    // Calcular siguiente vencimiento
+    $siguienteVencimiento = calcularSiguienteVencimiento($fechaVencimiento, $periodo);
+
+    // Construir explicación del cálculo
+    $explicacion = construirExplicacion($periodo, $fechaInicio, $fechaVencimiento, $fechaIdealEnvio, $siguienteVencimiento, $diasAnticipacion);
+
+    // Buscar órdenes atrasadas (periodos anteriores sin envío)
+    $ordenesAtrasadas = buscarOrdenesAtrasadas($servicio, $database);
+
+    return [
+        'contrato_id' => $servicio['contrato_id'],
+        'cliente_id' => $servicio['cliente_id'],
+        'empresa' => $servicio['razon_social'],
+        'ruc' => $servicio['ruc'],
+        'whatsapp' => $servicio['whatsapp'],
+        'servicio_nombre' => $servicio['servicio_nombre'],
+        'periodicidad' => $periodo,
+        'precio' => $servicio['precio'],
+        'moneda' => $servicio['moneda'],
+        'fecha_inicio' => $fechaInicio->format('d/m/Y'),
+        'fecha_vencimiento_periodo_actual' => $fechaVencimiento->format('d/m/Y'),
+        'fecha_ideal_envio' => $fechaIdealEnvio->format('d/m/Y'),
+        'dias_anticipacion' => $diasAnticipacion,
+        'dias_hasta_vencer' => $diasHastaVencer,
+        'estado' => $estado,
+        'debe_enviarse' => $debeEnviarse,
+        'ordenes_atrasadas' => $ordenesAtrasadas,
+        'siguiente_vencimiento' => $siguienteVencimiento->format('d/m/Y'),
+        'explicacion' => $explicacion
+    ];
+}
+
+/**
+ * Calcular siguiente vencimiento según periodicidad
+ */
+function calcularSiguienteVencimiento($fechaVencimiento, $periodo) {
+    $siguiente = clone $fechaVencimiento;
+
+    switch ($periodo) {
+        case 'mensual':
+            // Último día del mes siguiente
+            $siguiente->modify('last day of next month');
+            break;
+        case 'trimestral':
+            $siguiente->add(new DateInterval('P3M'));
+            $siguiente->modify('-1 day');
+            break;
+        case 'semestral':
+            $siguiente->add(new DateInterval('P6M'));
+            $siguiente->modify('-1 day');
+            break;
+        case 'anual':
+            $siguiente->add(new DateInterval('P1Y'));
+            $siguiente->modify('-1 day');
+            break;
+    }
+
+    return $siguiente;
+}
+
+/**
+ * Construir explicación detallada del cálculo
+ */
+function construirExplicacion($periodo, $fechaInicio, $fechaVencimiento, $fechaIdealEnvio, $siguienteVencimiento, $diasAnticipacion) {
+    $explicaciones = [
+        'mensual' => "Servicio mensual. Vence el último día del mes. Debe enviarse {$diasAnticipacion} días antes.",
+        'trimestral' => "Servicio trimestral. Vence 3 meses después del inicio, el día anterior. Debe enviarse {$diasAnticipacion} días antes.",
+        'semestral' => "Servicio semestral. Vence 6 meses después del inicio, el día anterior. Debe enviarse {$diasAnticipacion} días antes.",
+        'anual' => "Servicio anual. Vence 12 meses después del inicio, el día anterior. Debe enviarse {$diasAnticipacion} días antes."
+    ];
+
+    $base = $explicaciones[$periodo] ?? '';
+
+    return [
+        'regla' => $base,
+        'fecha_inicio' => $fechaInicio->format('d/m/Y'),
+        'vencimiento_actual' => $fechaVencimiento->format('d/m/Y'),
+        'fecha_ideal_envio' => $fechaIdealEnvio->format('d/m/Y'),
+        'siguiente_vencimiento' => $siguienteVencimiento->format('d/m/Y')
+    ];
+}
+
+/**
+ * Buscar órdenes atrasadas (periodos anteriores sin envío)
+ */
+function buscarOrdenesAtrasadas($servicio, $database) {
+    // Por ahora devolvemos vacío, esto se puede implementar más adelante
+    // Requeriría revisar historial de envíos vs periodos transcurridos
+    return [];
 }
 ?>

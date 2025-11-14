@@ -14,10 +14,14 @@ async function cargarClientesDesdeDB() {
                 id: cliente.id,
                 ruc: cliente.ruc,
                 razonSocial: cliente.razon_social,
-                monto: cliente.monto,
-                fecha: cliente.fecha_vencimiento,
+                // Usar datos de servicios activos separados por moneda
+                monto: cliente.monto_servicios_activos || cliente.monto || 0,
+                monto_pen: cliente.monto_pen || 0,
+                monto_usd: cliente.monto_usd || 0,
+                fecha: cliente.proximo_vencimiento || cliente.fecha_vencimiento,
                 whatsapp: cliente.whatsapp,
-                tipo_servicio: cliente.tipo_servicio || 'anual',
+                // Usar periodo real del servicio, fallback al campo antiguo
+                tipo_servicio: cliente.periodo_proximo_vencimiento || cliente.tipo_servicio || 'anual',
                 diasRestantes: cliente.dias_restantes,
                 estadoVencimiento: cliente.estado_vencimiento
             }));

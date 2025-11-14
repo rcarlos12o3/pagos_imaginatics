@@ -1,0 +1,540 @@
+/**
+ * ============================================
+ * APPLE DESIGN - SIDEBAR NAVIGATION
+ * macOS/iOS style sidebar with topbar
+ * ============================================
+ */
+
+/* ============================================
+   LAYOUT PRINCIPAL
+   ============================================ */
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    background: var(--bg-primary);
+}
+
+/* ============================================
+   SIDEBAR - ESTILO macOS
+   ============================================ */
+
+.sidebar {
+    width: 260px;
+    background: var(--bg-glass-dark);
+    backdrop-filter: var(--blur-medium);
+    -webkit-backdrop-filter: var(--blur-medium);
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    z-index: 100;
+}
+
+/* Logo en sidebar */
+.sidebar-header {
+    padding: var(--spacing-lg) var(--spacing-xl);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.sidebar-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+}
+
+.sidebar-brand {
+    flex: 1;
+}
+
+.sidebar-brand h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+}
+
+.sidebar-brand p {
+    margin: 0;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+}
+
+/* ============================================
+   SIDEBAR NAVIGATION
+   ============================================ */
+
+.sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+}
+
+.nav-section {
+    margin-bottom: var(--spacing-lg);
+}
+
+.nav-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-tertiary);
+    padding: var(--spacing-sm) var(--spacing-md);
+    margin-bottom: var(--spacing-xs);
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: 10px var(--spacing-md);
+    margin-bottom: 4px;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    user-select: none;
+}
+
+.nav-item:hover {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--text-primary);
+}
+
+.nav-item.active {
+    background: var(--apple-blue);
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+}
+
+.nav-item-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.nav-item-text {
+    flex: 1;
+}
+
+.nav-item-badge {
+    background: var(--apple-red);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+}
+
+/* ============================================
+   TOPBAR - ESTILO macOS
+   ============================================ */
+
+.main-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.topbar {
+    height: 60px;
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur-light);
+    -webkit-backdrop-filter: var(--blur-light);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--spacing-xl);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    z-index: 50;
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.topbar-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+}
+
+.topbar-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+/* ============================================
+   USER MENU - TOPBAR
+   ============================================ */
+
+.user-menu {
+    position: relative;
+}
+
+.user-menu-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.user-menu-btn:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--apple-blue);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.user-chevron {
+    width: 10px;
+    height: 10px;
+    opacity: 0.5;
+    transition: transform var(--transition-fast);
+}
+
+.user-menu.active .user-chevron {
+    transform: rotate(180deg);
+}
+
+/* User dropdown */
+.user-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 200px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all var(--transition-fast);
+    overflow: hidden;
+}
+
+.user-menu.active .user-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.user-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: 12px var(--spacing-lg);
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    text-decoration: none;
+}
+
+.user-dropdown-item:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.user-dropdown-item.danger {
+    color: var(--apple-red);
+}
+
+.user-dropdown-divider {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.06);
+    margin: 4px 0;
+}
+
+/* ============================================
+   MAIN CONTENT AREA
+   ============================================ */
+
+.main-content-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--bg-primary);
+    padding: var(--spacing-xl);
+}
+
+.page-content {
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+/* Páginas ocultas por defecto */
+.page-view {
+    display: none;
+}
+
+.page-view.active {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================
+   SCROLLBAR PERSONALIZADO
+   ============================================ */
+
+.sidebar-nav::-webkit-scrollbar,
+.main-content-wrapper::-webkit-scrollbar {
+    width: 8px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track,
+.main-content-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb,
+.main-content-wrapper::-webkit-scrollbar-thumb {
+    background: var(--apple-gray-light);
+    border-radius: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover,
+.main-content-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--apple-gray);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        left: -260px;
+        height: 100vh;
+        transition: left var(--transition-medium);
+        z-index: 1000;
+    }
+
+    .sidebar.mobile-open {
+        left: 0;
+    }
+
+    .topbar {
+        padding: 0 var(--spacing-md);
+    }
+
+    .main-content-wrapper {
+        padding: var(--spacing-md);
+    }
+
+    .user-name {
+        display: none;
+    }
+}
+
+/* ============================================
+   SIDEBAR FOOTER (opcional)
+   ============================================ */
+
+.sidebar-footer {
+    padding: var(--spacing-md);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.sidebar-footer-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 8px var(--spacing-md);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.sidebar-footer-item:hover {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--text-secondary);
+}
+
+/* ============================================
+   TABLA DE USUARIOS - ESTILO APPLE
+   ============================================ */
+
+.usuarios-table-container {
+    background: white;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-sm);
+}
+
+.usuarios-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.usuarios-table thead {
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.08) 0%, rgba(0, 122, 255, 0.04) 100%);
+    border-bottom: 2px solid rgba(0, 122, 255, 0.2);
+}
+
+.usuarios-table thead th {
+    padding: var(--spacing-md) var(--spacing-lg);
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+}
+
+.usuarios-table tbody tr {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    transition: all var(--transition-fast);
+}
+
+.usuarios-table tbody tr:hover {
+    background: rgba(0, 122, 255, 0.03);
+}
+
+.usuarios-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.usuarios-table tbody td {
+    padding: var(--spacing-md) var(--spacing-lg);
+    color: var(--text-primary);
+}
+
+.usuarios-table tbody td:first-child {
+    font-weight: 600;
+    color: var(--apple-blue);
+}
+
+/* Estado badges en tabla */
+.usuario-estado-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.usuario-estado-badge.activo {
+    background: rgba(52, 199, 89, 0.15);
+    color: #248A3D;
+}
+
+.usuario-estado-badge.inactivo {
+    background: rgba(142, 142, 147, 0.15);
+    color: #6e6e73;
+}
+
+.usuario-estado-badge.vencido {
+    background: rgba(255, 59, 48, 0.15);
+    color: #D70015;
+}
+
+.usuario-estado-badge.suspendido {
+    background: rgba(255, 149, 0, 0.15);
+    color: #C93400;
+}
+
+/* Acciones en tabla */
+.usuario-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.usuario-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.usuario-action-btn:hover {
+    background: rgba(0, 122, 255, 0.1);
+    color: var(--apple-blue);
+    transform: scale(1.1);
+}
+
+.usuario-action-btn.danger:hover {
+    background: rgba(255, 59, 48, 0.1);
+    color: var(--apple-red);
+}

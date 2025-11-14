@@ -25,11 +25,39 @@ docker-compose up -d
 ```
 
 ### Operaciones de Base de Datos
+
+**IMPORTANTE**: La aplicación está configurada para usar MySQL local en `127.0.0.1`.
+
+**Base de Datos Activa (configurada en config/database.php):**
 ```bash
-# Importar esquema de base de datos
+# Configuración actual:
+# - Host: 127.0.0.1
+# - Usuario: root
+# - Password: (vacío)
+# - Base de datos: imaginatics_ruc
+
+# Acceder a MySQL local (base de datos activa)
+mysql -h 127.0.0.1 -u root imaginatics_ruc
+
+# Consultar clientes
+mysql -h 127.0.0.1 -u root -e "USE imaginatics_ruc; SELECT * FROM clientes LIMIT 10;"
+
+# Actualizar registros
+mysql -h 127.0.0.1 -u root -e "USE imaginatics_ruc; UPDATE clientes SET whatsapp='51999999999' WHERE id=1;"
+
+# Hacer backups
+mysqldump -h 127.0.0.1 -u root imaginatics_ruc > backup.sql
+```
+
+**Contenedores Docker (ambiente alternativo):**
+```bash
+# Los contenedores Docker tienen una instancia SEPARADA de MySQL
+# Esta base de datos NO es la que usa la aplicación actualmente
+
+# Importar esquema al contenedor Docker
 docker exec -i imaginatics-mysql mysql -u imaginatics -pimaginations123 imaginatics_ruc < database.sql
 
-# Acceder directamente a MySQL
+# Acceder a MySQL en Docker
 docker exec -it imaginatics-mysql mysql -u imaginatics -pimaginations123 imaginatics_ruc
 ```
 
@@ -56,8 +84,9 @@ docker-compose down && docker-compose up -d --build
 
 ### Capa API (api/)
 - **consultar_ruc.php**: Consulta RUC con cache de 24 horas, integración API externa
-- **clientes.php**: Operaciones CRUD para gestión de clientes
-- **envios.php**: Envío de mensajes WhatsApp y seguimiento de entregas
+- **clientes.php**: Operaciones CRUD para gestión de clientes + **Sistema de Análisis Inteligente**
+- **envios.php**: Envío de mensajes WhatsApp, seguimiento de entregas y **Sistema de Cola**
+- **procesar_cola.php**: Worker que procesa envíos en background automáticamente
 - **diagnostico_especifico.php**: Verificaciones de salud del sistema y diagnósticos
 - **debug_whatsapp.php**: Testing y debugging de la API de WhatsApp
 
@@ -67,10 +96,15 @@ docker-compose down && docker-compose up -d --build
 - **database.js**: Operaciones de base de datos del lado cliente, wrappers CRUD
 - **csv.js**: Funcionalidad de importación/exportación CSV
 - **whatsapp.js**: Plantillas de mensajes, envío masivo, estado de entrega
+- **modulo-envios.js**: **Sistema de Análisis Inteligente** - Determina automáticamente qué empresas deben recibir órdenes
 
 ### Esquema de Base de Datos
 - **clientes**: Información de clientes con RUC, montos, fechas de vencimiento
+- **servicios_contratados**: Servicios contratados por cliente con periodicidad (mensual, trimestral, semestral, anual)
+- **catalogo_servicios**: Catálogo de servicios disponibles
 - **envios_whatsapp**: Seguimiento de entrega de mensajes y estado
+- **sesiones_envio**: Sesiones de envío masivo con estadísticas
+- **cola_envios**: Cola de trabajos de envío para procesamiento en background
 - **consultas_ruc**: Cache de consultas RUC y respuestas API
 - **configuracion**: Configuraciones del sistema y tokens API
 - **logs_sistema**: Logging de aplicación y auditoría
@@ -107,6 +141,49 @@ fetch(API_CLIENTES_BASE + "?action=list")
 - Imágenes de logo y mascota cargadas dinámicamente
 - Escalado responsivo y estilo corporativo
 
+## Sistema de Análisis Inteligente de Envíos
+
+### Descripción
+Sistema que analiza automáticamente qué empresas deben recibir órdenes de pago según reglas de negocio basadas en periodicidad y fechas de vencimiento.
+
+### Reglas de Envío
+- **Mensual**: Se envía 4 días antes del vencimiento (último día del mes)
+- **Trimestral**: Se envía 7 días antes del vencimiento
+- **Semestral**: Se envía 15 días antes del vencimiento
+- **Anual**: Se envía 30 días antes del vencimiento
+
+### Estados de Envío
+- **dentro_del_plazo_ideal**: Estamos en la ventana de envío (entre fecha ideal y vencimiento)
+- **fuera_del_plazo**: Ya pasó el vencimiento (orden atrasada) - DEBE enviarse
+- **pendiente**: Aún no llega la fecha ideal
+- **ya_enviado**: Ya se envió orden este periodo
+
+### Endpoint Principal
+```php
+// api/clientes.php?action=analizar_envios_pendientes
+// Retorna lista de servicios que deben recibir órdenes
+```
+
+### Validación de Seguridad
+- ⚠️ **CRÍTICO**: Solo se envía a empresas que el sistema determine como pendientes
+- No se permiten envíos masivos manuales
+- Confirmación explícita antes de cada envío
+- Trazabilidad total en base de datos
+
+### Sistema de Cola
+Los envíos se procesan mediante un sistema de cola:
+1. Frontend genera imágenes y crea sesión
+2. Trabajos se agregan a tabla `cola_envios`
+3. Worker PHP (`api/procesar_cola.php`) procesa automáticamente
+4. Estados actualizados en tiempo real
+
+**Worker debe configurarse para ejecutarse automáticamente en producción** (ver DEPLOYMENT.md)
+
+### Formato de Fechas
+- **IMPORTANTE**: Frontend usa formato `dd/mm/yyyy` (14/11/2025)
+- **Base de datos requiere**: `yyyy-mm-dd` (2025-11-14)
+- **Conversión**: Función `convertirFechaAISO()` en `modulo-envios.js`
+
 ## Notas Importantes
 
 - **Seguridad**: Usa declaraciones preparadas, validación de entrada y headers CORS
@@ -115,3 +192,5 @@ fetch(API_CLIENTES_BASE + "?action=list")
 - **Manejo de Errores**: Toggle de modo debug para desarrollo vs producción
 - **Integración WhatsApp**: Requiere tokens API válidos en configuración
 - **Zona Horaria**: Configurada a America/Lima para operaciones peruanas
+- **Worker**: `api/procesar_cola.php` debe ejecutarse periódicamente (cron/supervisor/systemd)
+- **Deployment**: Ver `DEPLOYMENT.md` para instrucciones completas de producción

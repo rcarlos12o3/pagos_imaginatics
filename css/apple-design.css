@@ -1,0 +1,863 @@
+/**
+ * ============================================
+ * APPLE DESIGN SYSTEM
+ * Imaginatics Perú SAC
+ * ============================================
+ *
+ * Sistema de diseño basado en Apple Human Interface Guidelines
+ * - Glassmorphism
+ * - Tipografía San Francisco
+ * - Colores iOS/macOS
+ * - Animaciones suaves
+ * - Sombras sutiles
+ */
+
+/* ============================================
+   VARIABLES CSS - APPLE DESIGN SYSTEM
+   ============================================ */
+
+:root {
+    /* Colores iOS */
+    --apple-blue: #007AFF;
+    --apple-green: #34C759;
+    --apple-orange: #FF9500;
+    --apple-red: #FF3B30;
+    --apple-gray: #8E8E93;
+    --apple-gray-light: #C7C7CC;
+    --apple-gray-lighter: #E5E5EA;
+
+    /* Backgrounds */
+    --bg-primary: #F2F2F7;
+    --bg-secondary: #FFFFFF;
+    --bg-glass: rgba(255, 255, 255, 0.72);
+    --bg-glass-dark: rgba(255, 255, 255, 0.85);
+
+    /* Texto */
+    --text-primary: #000000;
+    --text-secondary: #3C3C43;
+    --text-tertiary: #6E6E73;
+
+    /* Sombras Apple */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+    --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
+
+    /* Border radius Apple */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+
+    /* Espaciado */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+
+    /* Blur para glassmorphism */
+    --blur-light: blur(20px);
+    --blur-medium: blur(40px);
+    --blur-heavy: blur(60px);
+
+    /* Transiciones Apple */
+    --transition-fast: 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    --transition-medium: 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    --transition-slow: 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ============================================
+   TIPOGRAFÍA SAN FRANCISCO
+   ============================================ */
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+                 'Helvetica Neue', Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   RESET Y BASE
+   ============================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ============================================
+   CONTAINER PRINCIPAL
+   ============================================ */
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+/* ============================================
+   HEADER GLASSMORPHISM
+   ============================================ */
+
+.header {
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur-medium);
+    -webkit-backdrop-filter: var(--blur-medium);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+}
+
+.header::before {
+    display: none;
+}
+
+.header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+    margin: 0 0 var(--spacing-sm) 0;
+    order: 2;
+    text-align: left !important;
+}
+
+.header p {
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--text-tertiary);
+    margin: 0;
+    order: 3;
+    text-align: left !important;
+}
+
+/* ============================================
+   NAVEGACIÓN APPLE STYLE
+   ============================================ */
+
+.nav-buttons {
+    display: flex !important;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+    flex-wrap: wrap;
+    order: 1;
+    width: 100%;
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+}
+
+.nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 10px 18px;
+    background: var(--bg-glass-dark);
+    backdrop-filter: var(--blur-light);
+    -webkit-backdrop-filter: var(--blur-light);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+}
+
+.nav-btn:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+.nav-btn:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ============================================
+   MAIN CONTENT - UNA SOLA COLUMNA
+   ============================================ */
+
+.main-content {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--spacing-lg) !important;
+    padding: 0 !important;
+}
+
+.left-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+/* ============================================
+   CARDS GLASSMORPHISM
+   ============================================ */
+
+.card, .section {
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur-medium);
+    -webkit-backdrop-filter: var(--blur-medium);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-xl);
+    padding: 0;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-medium);
+    overflow: hidden;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.section.collapsed {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.card h2, .section h2 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--text-primary);
+    margin: 0 0 var(--spacing-lg) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+/* ============================================
+   SECCIÓN HEADER COLAPSABLE
+   ============================================ */
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg) var(--spacing-xl);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    user-select: none;
+    background: transparent;
+}
+
+.section-header:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.section-header:active {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.section-icon {
+    font-size: 20px;
+}
+
+.collapse-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.04);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.collapse-btn:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.collapse-btn .chevron {
+    transition: transform var(--transition-medium);
+    color: var(--text-secondary);
+}
+
+.section.collapsed .chevron {
+    transform: rotate(-90deg);
+}
+
+/* ============================================
+   SECCIÓN CONTENT
+   ============================================ */
+
+.section-content {
+    padding: 0 var(--spacing-xl) var(--spacing-xl) var(--spacing-xl);
+    max-height: 5000px;
+    overflow: hidden;
+    transition: max-height var(--transition-medium) ease-out, opacity var(--transition-medium);
+    opacity: 1;
+}
+
+.section-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* ============================================
+   FORMULARIOS APPLE STYLE
+   ============================================ */
+
+.form-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-sm);
+    letter-spacing: -0.1px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="date"],
+.form-group input[type="email"],
+.form-group input[type="tel"],
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--apple-gray-lighter);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--apple-blue);
+    background: #FFFFFF;
+    box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+}
+
+.form-group input::placeholder {
+    color: var(--apple-gray-light);
+}
+
+.form-group input[readonly] {
+    background: var(--bg-primary);
+    color: var(--text-tertiary);
+    cursor: not-allowed;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+.form-group select {
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%238E8E93' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+}
+
+/* ============================================
+   BOTONES APPLE STYLE
+   ============================================ */
+
+.btn, button[type="submit"], button[type="button"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    letter-spacing: -0.2px;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn:hover, button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn:active, button:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Botón Primary (Azul iOS) */
+.btn-primary, .btn.btn-primary {
+    background: var(--apple-blue);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0051D5;
+}
+
+/* Botón Success (Verde iOS) */
+.btn-success, .btn.btn-success {
+    background: var(--apple-green);
+    color: white;
+}
+
+.btn-success:hover {
+    background: #2AB04B;
+}
+
+/* Botón Warning (Naranja iOS) */
+.btn-warning, .btn.btn-warning {
+    background: var(--apple-orange);
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #E68600;
+}
+
+/* Botón Danger (Rojo iOS) */
+.btn-danger, .btn.btn-danger {
+    background: var(--apple-red);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #E6261F;
+}
+
+/* Botón Secondary (Gris) */
+.btn-secondary, .btn.btn-secondary {
+    background: var(--apple-gray);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7C7C81;
+}
+
+/* Botones pequeños */
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Grupo de botones */
+.btn-group {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+/* ============================================
+   TABLA ESTILO MAIL.APP
+   ============================================ */
+
+.table-container {
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur-medium);
+    -webkit-backdrop-filter: var(--blur-medium);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-xl);
+    padding: 0;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+thead {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+thead th {
+    padding: 14px 20px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--apple-gray-lighter);
+}
+
+tbody tr {
+    background: rgba(255, 255, 255, 0.5);
+    transition: all var(--transition-fast);
+}
+
+tbody tr:hover {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+tbody tr:not(:last-child) {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+tbody td {
+    padding: 16px 20px;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+/* ============================================
+   BADGES iOS STYLE
+   ============================================ */
+
+.badge, .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.badge-success {
+    background: rgba(52, 199, 89, 0.15);
+    color: #248A3D;
+}
+
+.badge-danger {
+    background: rgba(255, 59, 48, 0.15);
+    color: #D70015;
+}
+
+.badge-warning {
+    background: rgba(255, 149, 0, 0.15);
+    color: #C93400;
+}
+
+.badge-secondary {
+    background: rgba(142, 142, 147, 0.15);
+    color: #636366;
+}
+
+/* ============================================
+   MODALES GLASSMORPHISM
+   ============================================ */
+
+.modal-overlay {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: var(--blur-light);
+    -webkit-backdrop-filter: var(--blur-light);
+    animation: fadeIn var(--transition-medium) ease;
+}
+
+.modal-content {
+    background: var(--bg-glass-dark);
+    backdrop-filter: var(--blur-heavy);
+    -webkit-backdrop-filter: var(--blur-heavy);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    animation: slideUpSpring var(--transition-slow) var(--spring);
+}
+
+@keyframes slideUpSpring {
+    from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    padding: var(--spacing-lg) var(--spacing-xl);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.modal-header h3 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--text-primary);
+}
+
+.modal-body {
+    padding: var(--spacing-xl);
+}
+
+.modal-footer {
+    padding: var(--spacing-lg) var(--spacing-xl);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: flex-end;
+}
+
+.close-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.05);
+    border: none;
+    color: var(--text-secondary);
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.close-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--text-primary);
+}
+
+/* ============================================
+   HERRAMIENTAS COLAPSABLES
+   ============================================ */
+
+.tools-dropdown {
+    position: relative;
+    display: inline-block;
+    z-index: 100;
+}
+
+.tools-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 10px 18px;
+    background: var(--bg-glass-dark);
+    backdrop-filter: var(--blur-light);
+    -webkit-backdrop-filter: var(--blur-light);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+}
+
+.tools-btn:hover {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+.tools-dropdown-content {
+    display: none;
+    position: absolute;
+    top: calc(100% + var(--spacing-sm));
+    right: 0;
+    min-width: 280px;
+    background: var(--bg-glass-dark);
+    backdrop-filter: var(--blur-heavy);
+    -webkit-backdrop-filter: var(--blur-heavy);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    z-index: 9999;
+    animation: slideDown var(--transition-fast) ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tools-dropdown-content.show {
+    display: block;
+}
+
+.tools-menu-item {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.tools-menu-item:last-child {
+    border-bottom: none;
+}
+
+.tools-menu-item:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.tools-menu-item strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.tools-menu-item small {
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+/* ============================================
+   SECCIÓN OCULTA POR DEFECTO (LEGACY)
+   ============================================ */
+
+.section.hidden {
+    display: none;
+}
+
+/* Remover la clase hidden en favor de collapsed */
+.hidden.section {
+    display: block;
+}
+
+/* ============================================
+   RESPONSIVE APPLE STYLE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .container {
+        padding: var(--spacing-md);
+    }
+
+    .header {
+        padding: var(--spacing-lg);
+        border-radius: var(--radius-lg);
+    }
+
+    .header h1 {
+        font-size: 24px;
+    }
+
+    .nav-buttons {
+        flex-direction: column;
+    }
+
+    .nav-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .btn-group {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .modal-content {
+        width: 95%;
+        margin: var(--spacing-md);
+    }
+
+    /* Layout mobile - una columna */
+    .main-content {
+        flex-direction: column !important;
+    }
+}
+
+/* ============================================
+   ANIMACIONES ADICIONALES
+   ============================================ */
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Smooth scroll */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Focus visible para accesibilidad */
+*:focus-visible {
+    outline: 2px solid var(--apple-blue);
+    outline-offset: 2px;
+}
+
+/* ============================================
+   UTILIDADES
+   ============================================ */
+
+.text-muted {
+    color: var(--text-tertiary);
+    font-size: 13px;
+}
+
+.text-danger {
+    color: var(--apple-red);
+}
+
+.mt-1 { margin-top: var(--spacing-sm); }
+.mt-2 { margin-top: var(--spacing-md); }
+.mt-3 { margin-top: var(--spacing-lg); }
+.mt-4 { margin-top: var(--spacing-xl); }
+
+.mb-1 { margin-bottom: var(--spacing-sm); }
+.mb-2 { margin-bottom: var(--spacing-md); }
+.mb-3 { margin-bottom: var(--spacing-lg); }
+.mb-4 { margin-bottom: var(--spacing-xl); }

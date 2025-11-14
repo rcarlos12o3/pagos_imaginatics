@@ -80,13 +80,15 @@ try {
             continue;
         }
 
-        log_mensaje("  📋 {$trabajos[0]['count(*)']} trabajos pendientes en sesión #{$sesion['id']}");
+        $total_trabajos = count($trabajos);
+        log_mensaje("  📋 {$total_trabajos} trabajos pendientes en sesión #{$sesion['id']}");
 
         // Procesar cada trabajo
         $procesados = 0;
         foreach ($trabajos as $index => $trabajo) {
             try {
-                log_mensaje("  [{$index + 1}/{$trabajos[0]['count(*)']}] Procesando: {$trabajo['razon_social']}");
+                $num_trabajo = $index + 1;
+                log_mensaje("  [{$num_trabajo}/{$total_trabajos}] Procesando: {$trabajo['razon_social']}");
 
                 // Marcar como procesando
                 $database->query("

@@ -212,6 +212,22 @@ function actualizarListaClientes(clientesFiltrados = null) {
     lista.innerHTML = clientesAMostrar.map((cliente, index) => {
         const indexOriginal = clientes.indexOf(cliente);
         const estadoPago = obtenerEstadoPago(cliente.fecha, cliente.tipo_servicio);
+
+        // Formatear monto separado por moneda
+        let montoTexto = '';
+        const montoPen = parseFloat(cliente.monto_pen) || 0;
+        const montoUsd = parseFloat(cliente.monto_usd) || 0;
+
+        if (montoPen > 0 && montoUsd > 0) {
+            montoTexto = `S/ ${montoPen.toFixed(2)} + $ ${montoUsd.toFixed(2)}`;
+        } else if (montoPen > 0) {
+            montoTexto = `S/ ${montoPen.toFixed(2)}`;
+        } else if (montoUsd > 0) {
+            montoTexto = `$ ${montoUsd.toFixed(2)}`;
+        } else {
+            montoTexto = 'Sin servicios';
+        }
+
         return `
         <div class="client-item ${estadoPago.clase}" onclick="seleccionarCliente(${indexOriginal})" data-index="${indexOriginal}">
             <div class="client-name">
@@ -220,7 +236,7 @@ function actualizarListaClientes(clientesFiltrados = null) {
             </div>
             <div class="client-info">
                 <div><strong>RUC:</strong> ${cliente.ruc}</div>
-                <div><strong>Monto:</strong> S/ ${cliente.monto}</div>
+                <div><strong>Monto:</strong> ${montoTexto}</div>
                 <div><strong>Fecha:</strong> ${formatearFecha(cliente.fecha)}</div>
                 <div><strong>WhatsApp:</strong> ${cliente.whatsapp}</div>
                 <div><strong>Servicio:</strong> <span class="tipo-servicio">${cliente.tipo_servicio || 'anual'}</span></div>

@@ -1,0 +1,550 @@
+/**
+ * ============================================
+ * APPLE DESIGN - SERVICIOS Y DASHBOARD
+ * Estilos específicos para modales y componentes
+ * ============================================
+ */
+
+/* ============================================
+   TARJETAS DE SERVICIOS - APPLE STYLE
+   ============================================ */
+
+.servicio-tarjeta {
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur-medium);
+    -webkit-backdrop-filter: var(--blur-medium);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-medium);
+}
+
+.servicio-tarjeta:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.servicio-tarjeta.vencido {
+    background: rgba(255, 59, 48, 0.08);
+    border-left: 3px solid var(--apple-red);
+}
+
+.servicio-tarjeta.suspendido {
+    background: rgba(255, 149, 0, 0.08);
+    border-left: 3px solid var(--apple-orange);
+}
+
+/* ============================================
+   DASHBOARD MÉTRICAS - ESTILO HEALTHKIT
+   ============================================ */
+
+.dashboard-metricas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.metrica-card {
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur-medium);
+    -webkit-backdrop-filter: var(--blur-medium);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    transition: all var(--transition-medium);
+    box-shadow: var(--shadow-sm);
+}
+
+.metrica-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: scale(1.02);
+}
+
+.metrica-card.urgente {
+    background: linear-gradient(135deg,
+        rgba(255, 59, 48, 0.15) 0%,
+        rgba(255, 59, 48, 0.05) 100%);
+    border: 1px solid rgba(255, 59, 48, 0.3);
+}
+
+.metrica-card.alerta {
+    background: linear-gradient(135deg,
+        rgba(255, 149, 0, 0.15) 0%,
+        rgba(255, 149, 0, 0.05) 100%);
+    border: 1px solid rgba(255, 149, 0, 0.3);
+}
+
+.metrica-card.advertencia {
+    background: linear-gradient(135deg,
+        rgba(255, 204, 0, 0.15) 0%,
+        rgba(255, 204, 0, 0.05) 100%);
+    border: 1px solid rgba(255, 204, 0, 0.3);
+}
+
+.metrica-card.info {
+    background: linear-gradient(135deg,
+        rgba(0, 122, 255, 0.15) 0%,
+        rgba(0, 122, 255, 0.05) 100%);
+    border: 1px solid rgba(0, 122, 255, 0.3);
+}
+
+.metrica-icono {
+    font-size: 36px;
+    line-height: 1;
+}
+
+.metrica-valor {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    color: var(--text-primary);
+}
+
+.metrica-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================
+   FILTROS DASHBOARD - SEGMENTED CONTROL iOS
+   ============================================ */
+
+.dashboard-filtros {
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur-light);
+    -webkit-backdrop-filter: var(--blur-light);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.filtros-grupo {
+    display: flex;
+    gap: var(--spacing-xs);
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+}
+
+.filtro-btn {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.filtro-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.filtro-btn.activo {
+    background: white;
+    color: var(--apple-blue);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   SERVICIOS PENDIENTES - LISTA
+   ============================================ */
+
+.servicio-pendiente {
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur-medium);
+    -webkit-backdrop-filter: var(--blur-medium);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    transition: all var(--transition-medium);
+    box-shadow: var(--shadow-sm);
+}
+
+.servicio-pendiente:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateX(4px);
+}
+
+.servicio-pendiente.urgente {
+    border-left: 4px solid var(--apple-red);
+    background: rgba(255, 59, 48, 0.05);
+}
+
+.servicio-pendiente.alerta {
+    border-left: 4px solid var(--apple-orange);
+    background: rgba(255, 149, 0, 0.05);
+}
+
+.servicio-pendiente.advertencia {
+    border-left: 4px solid #FFCC00;
+    background: rgba(255, 204, 0, 0.05);
+}
+
+.urgencia-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.urgencia-badge.urgente {
+    background: rgba(255, 59, 48, 0.15);
+    color: #D70015;
+}
+
+.urgencia-badge.alerta {
+    background: rgba(255, 149, 0, 0.15);
+    color: #C93400;
+}
+
+.urgencia-badge.advertencia {
+    background: rgba(255, 204, 0, 0.15);
+    color: #B8860B;
+}
+
+/* ============================================
+   TIMELINE DE PAGOS - ESTILO iOS
+   ============================================ */
+
+.timeline-pagos {
+    position: relative;
+    padding: var(--spacing-lg) 0;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 50px;
+    padding-bottom: var(--spacing-xl);
+}
+
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 16px;
+    top: 35px;
+    bottom: -10px;
+    width: 2px;
+    background: linear-gradient(180deg,
+        var(--apple-blue) 0%,
+        var(--apple-gray-lighter) 100%);
+}
+
+.timeline-item:last-child::before {
+    display: none;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--apple-blue);
+    border: 3px solid white;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+}
+
+.timeline-content {
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur-medium);
+    -webkit-backdrop-filter: var(--blur-medium);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-medium);
+}
+
+.timeline-content:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateX(5px);
+}
+
+/* ============================================
+   RESUMEN FINANCIERO - CARDS
+   ============================================ */
+
+.dashboard-montos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.monto-card {
+    background: linear-gradient(135deg,
+        var(--apple-blue) 0%,
+        #0051D5 100%);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    color: white;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-medium);
+}
+
+.monto-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.monto-card h4 {
+    margin: 0 0 var(--spacing-md) 0;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.monto-valor {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -1px;
+}
+
+.monto-moneda {
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.8;
+}
+
+/* ============================================
+   CHECKBOXES ESTILO iOS
+   ============================================ */
+
+.servicio-pago-checkbox {
+    display: flex;
+    align-items: start;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur-light);
+    -webkit-backdrop-filter: var(--blur-light);
+    border: 2px solid var(--apple-gray-lighter);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.servicio-pago-checkbox:hover {
+    border-color: var(--apple-blue);
+    background: rgba(0, 122, 255, 0.05);
+}
+
+.servicio-pago-checkbox:has(input:checked) {
+    border-color: var(--apple-blue);
+    background: rgba(0, 122, 255, 0.1);
+}
+
+.servicio-pago-checkbox input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 2px solid var(--apple-gray-light);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: all var(--transition-fast);
+}
+
+.servicio-pago-checkbox input[type="checkbox"]:checked {
+    background: var(--apple-blue);
+    border-color: var(--apple-blue);
+}
+
+/* ============================================
+   INPUT GROUP APPLE STYLE
+   ============================================ */
+
+.input-group {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+}
+
+.input-group input {
+    flex: 1;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0 !important;
+    border-left: none !important;
+}
+
+.input-group span {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--apple-gray-lighter);
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.input-group button {
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    margin-left: -1px;
+}
+
+/* ============================================
+   LOADING SPINNER APPLE STYLE
+   ============================================ */
+
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 122, 255, 0.2);
+    border-top-color: var(--apple-blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ============================================
+   TOOLTIPS APPLE STYLE
+   ============================================ */
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: var(--blur-light);
+    -webkit-backdrop-filter: var(--blur-light);
+    color: white;
+    text-align: center;
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    position: absolute;
+    z-index: 1000;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: var(--shadow-md);
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* ============================================
+   EMPTY STATE APPLE STYLE
+   ============================================ */
+
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-xl) var(--spacing-lg);
+    color: var(--text-tertiary);
+}
+
+.empty-state-icon {
+    font-size: 48px;
+    margin-bottom: var(--spacing-md);
+    opacity: 0.5;
+}
+
+.empty-state-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+/* ============================================
+   PROGRESS BAR APPLE STYLE
+   ============================================ */
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--apple-gray-lighter);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: var(--apple-blue);
+    border-radius: 3px;
+    transition: width var(--transition-slow);
+}
+
+/* ============================================
+   DIVIDER APPLE STYLE
+   ============================================ */
+
+.divider {
+    height: 1px;
+    background: var(--apple-gray-lighter);
+    margin: var(--spacing-lg) 0;
+}
+
+/* ============================================
+   GRID LAYOUTS RESPONSIVE
+   ============================================ */
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+}
+
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-md);
+}
+
+@media (max-width: 768px) {
+    .grid-2,
+    .grid-3 {
+        grid-template-columns: 1fr;
+    }
+}
