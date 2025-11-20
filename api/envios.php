@@ -1022,14 +1022,15 @@ function generarImagenRecordatorioEndpoint($database, $input) {
 
         $resultado = enviarCurlWhatsApp($url, $payload, $config['token']);
 
-        // Registrar en BD
+        // Registrar en BD (ambas tablas para compatibilidad)
         $tipoEnvio = $input['dias_restantes'] < 0 ? 'recordatorio_vencido' : 'recordatorio_proximo';
 
+        // 1. Registrar en envios_whatsapp (tabla antigua, mantener para compatibilidad)
         $database->insert(
             "INSERT INTO envios_whatsapp (cliente_id, numero_destino, tipo_envio, estado, respuesta_api, mensaje_error, imagen_generada) VALUES (?, ?, ?, ?, ?, ?, ?)",
             [
                 $input['cliente_id'],
-                $numero,  // Agregar el número de destino
+                $numero,
                 $tipoEnvio,
                 $resultado['success'] ? 'enviado' : 'error',
                 json_encode($resultado['response']),
@@ -1037,6 +1038,19 @@ function generarImagenRecordatorioEndpoint($database, $input) {
                 1
             ]
         );
+
+        // 2. Registrar en historial_recordatorios (nuevo sistema)
+        registrarRecordatorioEnHistorial($database, [
+            'cliente_id' => $input['cliente_id'],
+            'dias_restantes' => $input['dias_restantes'],
+            'fecha_vencimiento' => $cliente['fecha_vencimiento'],
+            'monto' => $cliente['monto'] ?? 0,
+            'estado_envio' => $resultado['success'] ? 'enviado' : 'error',
+            'numero_destino' => $numero,
+            'respuesta_api' => json_encode($resultado['response']),
+            'error_detalle' => $resultado['error'],
+            'fue_automatico' => false
+        ]);
 
         jsonResponse([
             'success' => $resultado['success'],
@@ -1613,6 +1627,151 @@ function generarMensajeParaTrabajo($cliente, $tipoEnvio) {
 
         default:
             return "Mensaje de Imaginatics Peru SAC";
+    }
+}
+
+/**
+ * Registrar recordatorio en historial_recordatorios
+ * Esta función registra tanto en envios_whatsapp (para compatibilidad) como en historial_recordatorios (nuevo sistema)
+ */
+function registrarRecordatorioEnHistorial($database, $data) {
+    try {
+        // Determinar tipo de recordatorio según días restantes
+        $diasRestantes = $data['dias_restantes'];
+        $tipoRecordatorio = determinarTipoRecordatorioInterno($diasRestantes);
+
+        // Insertar en historial_recordatorios
+        $historialId = $database->insert(
+            "INSERT INTO historial_recordatorios
+            (cliente_id, servicio_id, tipo_recordatorio, dias_antes_vencimiento,
+             fecha_envio, fecha_vencimiento, monto, estado_envio, canal,
+             numero_destino, mensaje_enviado, respuesta_api, error_detalle,
+             sesion_envio_id, fue_automatico)
+            VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                $data['cliente_id'],
+                $data['servicio_id'] ?? null,
+                $tipoRecordatorio,
+                $diasRestantes,
+                $data['fecha_vencimiento'],
+                $data['monto'] ?? 0,
+                $data['estado_envio'] ?? 'enviado',
+                $data['canal'] ?? 'whatsapp',
+                $data['numero_destino'],
+                $data['mensaje'] ?? null,
+                $data['respuesta_api'] ?? null,
+                $data['error_detalle'] ?? null,
+                $data['sesion_envio_id'] ?? null,
+                $data['fue_automatico'] ?? false
+            ]
+        );
+
+        // Registrar log
+        $database->query(
+            "INSERT INTO logs_sistema (nivel, modulo, mensaje, datos_adicionales) VALUES (?, ?, ?, ?)",
+            [
+                'info',
+                'recordatorios',
+                'Recordatorio registrado en historial',
+                json_encode([
+                    'historial_id' => $historialId,
+                    'cliente_id' => $data['cliente_id'],
+                    'tipo' => $tipoRecordatorio,
+                    'dias_restantes' => $diasRestantes
+                ])
+            ]
+        );
+
+        return $historialId;
+
+    } catch (Exception $e) {
+        error_log("Error registrando recordatorio en historial: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Determinar tipo de recordatorio según días restantes (uso interno)
+ */
+function determinarTipoRecordatorioInterno($diasRestantes) {
+    if ($diasRestantes < 0) {
+        // Ya vencido
+        $diasAtraso = abs($diasRestantes);
+        if ($diasAtraso >= 15) {
+            return 'mora';
+        } else {
+            return 'vencido';
+        }
+    } else if ($diasRestantes == 0) {
+        return 'critico'; // Vence hoy
+    } else if ($diasRestantes <= 1) {
+        return 'critico';
+    } else if ($diasRestantes <= 3) {
+        return 'urgente';
+    } else {
+        return 'preventivo';
+    }
+}
+
+/**
+ * Verificar límites de frecuencia de recordatorios para un cliente
+ * Retorna true si se puede enviar, false si se debe omitir
+ */
+function verificarLimitesRecordatorioAPI($database, $clienteId) {
+    try {
+        // Obtener configuración
+        $diasMinimos = $database->fetch(
+            "SELECT valor FROM config_recordatorios WHERE clave = 'dias_minimos_entre_recordatorios'"
+        );
+        $maxMes = $database->fetch(
+            "SELECT valor FROM config_recordatorios WHERE clave = 'max_recordatorios_mes'"
+        );
+
+        $diasMinimoValor = $diasMinimos ? (int)$diasMinimos['valor'] : 3;
+        $maxMesValor = $maxMes ? (int)$maxMes['valor'] : 8;
+
+        // 1. Verificar días mínimos desde último recordatorio
+        $ultimoEnvio = $database->fetch(
+            "SELECT MAX(fecha_envio) as ultima_fecha
+             FROM historial_recordatorios
+             WHERE cliente_id = ? AND estado_envio = 'enviado'",
+            [$clienteId]
+        );
+
+        if ($ultimoEnvio && $ultimoEnvio['ultima_fecha']) {
+            $diasDesdeUltimo = (strtotime('now') - strtotime($ultimoEnvio['ultima_fecha'])) / (60 * 60 * 24);
+
+            if ($diasDesdeUltimo < $diasMinimoValor) {
+                return [
+                    'permitido' => false,
+                    'razon' => "Último recordatorio enviado hace {$diasDesdeUltimo} días (mínimo: {$diasMinimoValor})"
+                ];
+            }
+        }
+
+        // 2. Verificar máximo de recordatorios por mes
+        $countMes = $database->fetch(
+            "SELECT COUNT(*) as total
+             FROM historial_recordatorios
+             WHERE cliente_id = ?
+             AND fecha_envio >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+             AND estado_envio = 'enviado'",
+            [$clienteId]
+        );
+
+        if ($countMes && $countMes['total'] >= $maxMesValor) {
+            return [
+                'permitido' => false,
+                'razon' => "Se alcanzó el máximo de recordatorios del mes ({$maxMesValor})"
+            ];
+        }
+
+        return ['permitido' => true];
+
+    } catch (Exception $e) {
+        error_log("Error verificando límites de recordatorio: " . $e->getMessage());
+        // En caso de error, permitir envío para no bloquear el sistema
+        return ['permitido' => true];
     }
 }
 

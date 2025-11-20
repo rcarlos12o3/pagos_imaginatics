@@ -1,0 +1,18 @@
+# Logs locales
+logs/*.log
+
+# Archivos de test
+test_*.php
+
+# Archivos temporales
+*.tmp
+*.bak
+*.swp
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

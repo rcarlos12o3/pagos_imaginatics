@@ -703,6 +703,418 @@ require_once 'auth/session_check.php';
         .form-actions .btn {
             min-width: 120px;
         }
+
+        /* ================================================
+           APPLE DESIGN - MÓDULO DE NOTIFICACIONES
+           ================================================ */
+
+        /* Dashboard de Estado Automático */
+        .auto-dashboard {
+            background: linear-gradient(135deg, #ffffff 0%, #f5f5f7 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .auto-dashboard:hover {
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .auto-dashboard-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .auto-dashboard-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 600;
+            color: #1d1d1f;
+            letter-spacing: -0.02em;
+        }
+
+        .auto-dashboard-title .icon {
+            font-size: 28px;
+        }
+
+        .auto-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+
+        .auto-status-badge.active {
+            background: linear-gradient(135deg, #34C759 0%, #30D158 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(52, 199, 89, 0.3);
+        }
+
+        .auto-status-badge.inactive {
+            background: #e5e5e7;
+            color: #86868b;
+        }
+
+        .auto-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: white;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(0.95); }
+        }
+
+        .auto-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .auto-info-item {
+            background: white;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .auto-info-label {
+            font-size: 13px;
+            color: #86868b;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .auto-info-value {
+            font-size: 17px;
+            color: #1d1d1f;
+            font-weight: 600;
+        }
+
+        /* Cards de Estadísticas */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: currentColor;
+            opacity: 0.8;
+        }
+
+        .stat-card:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            transform: translateY(-4px);
+        }
+
+        .stat-card.critical { color: #FF3B30; }
+        .stat-card.today { color: #FF9500; }
+        .stat-card.warning { color: #FFCC00; }
+        .stat-card.success { color: #34C759; }
+
+        .stat-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .stat-card-icon {
+            font-size: 32px;
+            line-height: 1;
+        }
+
+        .stat-card-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: currentColor;
+            color: white;
+            opacity: 0.9;
+        }
+
+        .stat-card-value {
+            font-size: 48px;
+            font-weight: 700;
+            color: currentColor;
+            line-height: 1;
+            margin-bottom: 8px;
+            letter-spacing: -0.03em;
+        }
+
+        .stat-card-label {
+            font-size: 15px;
+            color: #86868b;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .stat-card-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: currentColor;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: gap 0.2s;
+        }
+
+        .stat-card-action:hover {
+            gap: 10px;
+        }
+
+        /* Modal Mejorado Apple Style */
+        .modal-overlay {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #f5f5f7 0%, #ffffff 100%);
+            padding: 24px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 16px 16px 0 0;
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1d1d1f;
+            letter-spacing: -0.02em;
+        }
+
+        .modal-summary-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+        }
+
+        .modal-summary-card {
+            text-align: center;
+            padding: 16px;
+            background: linear-gradient(135deg, #f5f5f7 0%, #fafafa 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .modal-summary-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .modal-summary-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .modal-summary-value.critical { color: #FF3B30; }
+        .modal-summary-value.today { color: #FF9500; }
+        .modal-summary-value.warning { color: #FFCC00; }
+
+        .modal-summary-label {
+            font-size: 13px;
+            color: #86868b;
+            font-weight: 500;
+        }
+
+        .client-card-enhanced {
+            background: white;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .client-card-enhanced:hover {
+            border-color: rgba(0, 122, 255, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            transform: translateX(4px);
+        }
+
+        .client-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .client-name-enhanced {
+            font-size: 17px;
+            font-weight: 600;
+            color: #1d1d1f;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-indicator.critical { background: #FF3B30; }
+        .status-indicator.today { background: #FF9500; }
+        .status-indicator.warning { background: #FFCC00; }
+
+        .client-details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: #f5f5f7;
+            border-radius: 8px;
+        }
+
+        .client-detail-item {
+            font-size: 13px;
+            color: #1d1d1f;
+        }
+
+        .client-detail-item strong {
+            color: #86868b;
+            font-weight: 500;
+            margin-right: 6px;
+        }
+
+        .alert-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .alert-badge.critical {
+            background: rgba(255, 59, 48, 0.1);
+            color: #FF3B30;
+        }
+
+        .alert-badge.today {
+            background: rgba(255, 149, 0, 0.1);
+            color: #FF9500;
+        }
+
+        .alert-badge.warning {
+            background: rgba(255, 204, 0, 0.1);
+            color: #FFCC00;
+        }
+
+        .search-filter-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 16px;
+            background: #f5f5f7;
+            border-radius: 12px;
+        }
+
+        .search-input-enhanced {
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            font-size: 15px;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .search-input-enhanced:focus {
+            outline: none;
+            border-color: #007AFF;
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+        }
+
+        .filter-button {
+            padding: 10px 18px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            background: white;
+            color: #007AFF;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-button:hover {
+            background: #007AFF;
+            color: white;
+            border-color: #007AFF;
+        }
     </style>
     <link rel="stylesheet" href="css/servicios.css">
     <link rel="stylesheet" href="css/apple-design.css">
@@ -938,12 +1350,110 @@ require_once 'auth/session_check.php';
                 <div id="page-notificaciones" class="page-view">
                     <div class="page-content">
                         <div class="main-content">
-                            <!-- Notificaciones de Vencimiento -->
+
+                            <!-- Dashboard de Recordatorios Automáticos -->
+                            <div class="auto-dashboard">
+                                <div class="auto-dashboard-header">
+                                    <div class="auto-dashboard-title">
+                                        <span class="icon">🤖</span>
+                                        <span>Recordatorios Automáticos</span>
+                                    </div>
+                                    <div class="auto-status-badge active" id="autoStatusBadge">
+                                        <span class="auto-status-dot"></span>
+                                        <span>ACTIVO</span>
+                                    </div>
+                                </div>
+
+                                <div class="auto-info-grid">
+                                    <div class="auto-info-item">
+                                        <div class="auto-info-label">Última Ejecución</div>
+                                        <div class="auto-info-value" id="ultimaEjecucion">Cargando...</div>
+                                    </div>
+                                    <div class="auto-info-item">
+                                        <div class="auto-info-label">Próxima Ejecución</div>
+                                        <div class="auto-info-value" id="proximaEjecucion">Mañana 09:00</div>
+                                    </div>
+                                    <div class="auto-info-item">
+                                        <div class="auto-info-label">Días Entre Recordatorios</div>
+                                        <div class="auto-info-value" id="diasMinimos">3 días</div>
+                                    </div>
+                                    <div class="auto-info-item">
+                                        <div class="auto-info-label">Máximo por Mes</div>
+                                        <div class="auto-info-value" id="maxPorMes">8 recordatorios</div>
+                                    </div>
+                                </div>
+
+                                <div class="btn-group">
+                                    <button class="btn btn-primary" onclick="verHistorialRecordatorios()" style="background: #007AFF; border-color: #007AFF;">
+                                        📊 Ver Historial Completo
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="configurarRecordatorios()">
+                                        ⚙️ Configurar Sistema
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Cards de Estadísticas -->
+                            <div class="stats-grid">
+                                <div class="stat-card critical" onclick="verDetalleEstado('vencidos')">
+                                    <div class="stat-card-header">
+                                        <span class="stat-card-icon">🚨</span>
+                                        <span class="stat-card-badge">CRÍTICO</span>
+                                    </div>
+                                    <div class="stat-card-value" id="statVencidos">0</div>
+                                    <div class="stat-card-label">Vencidos</div>
+                                    <div class="stat-card-action">
+                                        Ver detalles
+                                        <span>→</span>
+                                    </div>
+                                </div>
+
+                                <div class="stat-card today" onclick="verDetalleEstado('vence_hoy')">
+                                    <div class="stat-card-header">
+                                        <span class="stat-card-icon">⏰</span>
+                                        <span class="stat-card-badge">HOY</span>
+                                    </div>
+                                    <div class="stat-card-value" id="statVenceHoy">0</div>
+                                    <div class="stat-card-label">Vence Hoy</div>
+                                    <div class="stat-card-action">
+                                        Ver detalles
+                                        <span>→</span>
+                                    </div>
+                                </div>
+
+                                <div class="stat-card warning" onclick="verDetalleEstado('por_vencer')">
+                                    <div class="stat-card-header">
+                                        <span class="stat-card-icon">⚠️</span>
+                                        <span class="stat-card-badge">PRÓXIMOS</span>
+                                    </div>
+                                    <div class="stat-card-value" id="statPorVencer">0</div>
+                                    <div class="stat-card-label">Por Vencer</div>
+                                    <div class="stat-card-action">
+                                        Ver detalles
+                                        <span>→</span>
+                                    </div>
+                                </div>
+
+                                <div class="stat-card success" onclick="actualizarEstadisticas()">
+                                    <div class="stat-card-header">
+                                        <span class="stat-card-icon">✅</span>
+                                        <span class="stat-card-badge">ENVIADOS</span>
+                                    </div>
+                                    <div class="stat-card-value" id="statEnviados">0</div>
+                                    <div class="stat-card-label">Este Mes</div>
+                                    <div class="stat-card-action">
+                                        Actualizar
+                                        <span>↻</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Notificaciones Manuales de Vencimiento -->
                             <div class="section">
                                 <div class="section-header" onclick="toggleSectionContent('section-notif-content')">
                                     <div class="section-title">
                                         <span class="section-icon">🔔</span>
-                                        <span>Notificaciones de Vencimiento</span>
+                                        <span>Notificaciones Manuales</span>
                                     </div>
                                     <button class="collapse-btn" type="button">
                                         <svg class="chevron" width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -1508,101 +2018,164 @@ require_once 'auth/session_check.php';
 
             if (totalClientes === 0) {
                 container.innerHTML = `
-                    <div style="text-align: center; padding: var(--spacing-xl); color: var(--text-tertiary);">
-                        <div style="font-size: 48px; margin-bottom: var(--spacing-md);">✅</div>
-                        <div style="font-size: 16px; font-weight: 500;">No hay clientes próximos a vencer</div>
+                    <div style="text-align: center; padding: 40px; color: #86868b;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">✅</div>
+                        <div style="font-size: 17px; font-weight: 600; color: #1d1d1f; margin-bottom: 8px;">
+                            Todo al día
+                        </div>
+                        <div style="font-size: 14px; color: #86868b;">
+                            No hay clientes próximos a vencer
+                        </div>
                     </div>
                 `;
                 return;
             }
 
-            let html = `<div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--apple-blue); color: white; border-radius: var(--radius-md); font-weight: 600; text-align: center;">
-                📊 Total de clientes para notificar: ${totalClientes}
-            </div>`;
+            // Summary Cards with Apple HIG styling
+            let html = `
+                <div style="margin-bottom: 24px;">
+                    <!-- Summary Stats -->
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
+                        ${resultado.vencidos.length > 0 ? `
+                            <div class="modal-summary-card" style="background: linear-gradient(135deg, #FF3B30 0%, #D70015 100%);">
+                                <div style="font-size: 32px; font-weight: 700; margin-bottom: 4px;">
+                                    ${resultado.vencidos.length}
+                                </div>
+                                <div style="font-size: 13px; opacity: 0.9;">
+                                    Vencidos
+                                </div>
+                            </div>
+                        ` : ''}
+                        ${resultado.vence_hoy.length > 0 ? `
+                            <div class="modal-summary-card" style="background: linear-gradient(135deg, #FF9500 0%, #FF6D00 100%);">
+                                <div style="font-size: 32px; font-weight: 700; margin-bottom: 4px;">
+                                    ${resultado.vence_hoy.length}
+                                </div>
+                                <div style="font-size: 13px; opacity: 0.9;">
+                                    Vence hoy
+                                </div>
+                            </div>
+                        ` : ''}
+                        ${resultado.por_vencer.length > 0 ? `
+                            <div class="modal-summary-card" style="background: linear-gradient(135deg, #FFCC00 0%, #FF9500 100%);">
+                                <div style="font-size: 32px; font-weight: 700; margin-bottom: 4px;">
+                                    ${resultado.por_vencer.length}
+                                </div>
+                                <div style="font-size: 13px; opacity: 0.9;">
+                                    Por vencer
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
 
-            // Sección de VENCIDOS
-            if (resultado.vencidos.length > 0) {
+                    <!-- Search Bar -->
+                    <div class="search-filter-bar">
+                        <input type="text"
+                               id="searchClientesNotif"
+                               placeholder="Buscar por razón social o RUC..."
+                               onkeyup="filtrarClientesNotif()"
+                               style="width: 100%; padding: 12px 16px; border: 1px solid #d2d2d7; border-radius: 10px;
+                                      font-size: 15px; transition: all 0.2s; background: #fff;">
+                    </div>
+                </div>
+            `;
+
+            // Enhanced Client Cards
+            const todosClientes = [
+                ...resultado.vencidos.map(c => ({...c, tipo: 'vencido', prioridad: 1})),
+                ...resultado.vence_hoy.map(c => ({...c, tipo: 'hoy', prioridad: 2})),
+                ...resultado.por_vencer.map(c => ({...c, tipo: 'por_vencer', prioridad: 3}))
+            ];
+
+            todosClientes.forEach((cliente) => {
+                const diasInfo = cliente.tipo === 'vencido'
+                    ? `${Math.abs(cliente.dias_restantes)} día${Math.abs(cliente.dias_restantes) !== 1 ? 's' : ''} de atraso`
+                    : cliente.tipo === 'hoy'
+                    ? 'ÚLTIMO DÍA'
+                    : `${cliente.dias_restantes} día${cliente.dias_restantes !== 1 ? 's' : ''} restantes`;
+
+                const colorConfig = {
+                    'vencido': { bg: '#FFF5F5', border: '#FF3B30', text: '#FF3B30', badge: '#FF3B30' },
+                    'hoy': { bg: '#FFF4E6', border: '#FF9500', text: '#FF9500', badge: '#FF9500' },
+                    'por_vencer': { bg: '#FFFAE6', border: '#FFCC00', text: '#FF9500', badge: '#FFCC00' }
+                };
+
+                const config = colorConfig[cliente.tipo];
+
                 html += `
-                    <div style="margin-bottom: 20px;">
-                        <div style="background: #ff6b6b; color: white; padding: 12px; border-radius: 8px 8px 0 0; font-weight: bold;">
-                            🚨 VENCIDOS (${resultado.vencidos.length})
+                    <div class="client-card-enhanced" data-cliente="${cliente.razon_social.toLowerCase()} ${cliente.ruc}"
+                         style="border-left: 4px solid ${config.border}; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                            <div>
+                                <div style="font-size: 17px; font-weight: 600; color: #1d1d1f; margin-bottom: 4px;">
+                                    ${cliente.razon_social}
+                                </div>
+                                <div style="font-size: 13px; color: #86868b;">
+                                    RUC: ${cliente.ruc}
+                                </div>
+                            </div>
+                            <span style="background: ${config.badge}; color: white; padding: 4px 12px;
+                                       border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
+                                ${cliente.tipo === 'vencido' ? 'Vencido' : cliente.tipo === 'hoy' ? 'Hoy' : 'Próximo'}
+                            </span>
                         </div>
-                        <div style="border: 2px solid #ff6b6b; border-top: none; border-radius: 0 0 8px 8px; overflow: hidden;">
-                `;
 
-                resultado.vencidos.forEach((cliente, index) => {
-                    const diasAtraso = Math.abs(cliente.dias_restantes);
-                    html += `
-                        <div style="padding: 12px; border-bottom: 1px solid #f8f9fa; ${index % 2 === 0 ? 'background: #fff5f5;' : 'background: white;'}">
-                            <div style="font-weight: bold; color: #c92a2a; margin-bottom: 4px;">${cliente.razon_social}</div>
-                            <div style="font-size: 13px; color: #666;">
-                                RUC: ${cliente.ruc} •
-                                WhatsApp: ${cliente.whatsapp ? (cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp) : 'No registrado'} •
-                                Monto: S/ ${cliente.monto} •
-                                <strong style="color: #c92a2a;">${diasAtraso} día${diasAtraso !== 1 ? 's' : ''} de atraso</strong>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding-top: 12px;
+                                    border-top: 1px solid #f5f5f7;">
+                            <div>
+                                <div style="font-size: 11px; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+                                    WhatsApp
+                                </div>
+                                <div style="font-size: 15px; color: #1d1d1f; font-weight: 500;">
+                                    ${cliente.whatsapp ? (cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp) : 'No registrado'}
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size: 11px; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+                                    Monto
+                                </div>
+                                <div style="font-size: 15px; color: #1d1d1f; font-weight: 500;">
+                                    S/ ${cliente.monto}
+                                </div>
                             </div>
                         </div>
-                    `;
-                });
 
-                html += '</div></div>';
-            }
-
-            // Sección de VENCE HOY
-            if (resultado.vence_hoy.length > 0) {
-                html += `
-                    <div style="margin-bottom: 20px;">
-                        <div style="background: #ff8800; color: white; padding: 12px; border-radius: 8px 8px 0 0; font-weight: bold;">
-                            ⏰ VENCE HOY (${resultado.vence_hoy.length})
+                        <div style="margin-top: 12px; padding: 8px 12px; background: ${config.bg}; border-radius: 8px;
+                                    font-size: 13px; color: ${config.text}; font-weight: 600; text-align: center;">
+                            ${diasInfo}
                         </div>
-                        <div style="border: 2px solid #ff8800; border-top: none; border-radius: 0 0 8px 8px; overflow: hidden;">
+                    </div>
                 `;
-
-                resultado.vence_hoy.forEach((cliente, index) => {
-                    html += `
-                        <div style="padding: 12px; border-bottom: 1px solid #f8f9fa; ${index % 2 === 0 ? 'background: #fff4e6;' : 'background: white;'}">
-                            <div style="font-weight: bold; color: #d9480f; margin-bottom: 4px;">${cliente.razon_social}</div>
-                            <div style="font-size: 13px; color: #666;">
-                                RUC: ${cliente.ruc} •
-                                WhatsApp: ${cliente.whatsapp ? (cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp) : 'No registrado'} •
-                                Monto: S/ ${cliente.monto} •
-                                <strong style="color: #d9480f;">ÚLTIMO DÍA</strong>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                html += '</div></div>';
-            }
-
-            // Sección de POR VENCER
-            if (resultado.por_vencer.length > 0) {
-                html += `
-                    <div style="margin-bottom: 20px;">
-                        <div style="background: #fab005; color: white; padding: 12px; border-radius: 8px 8px 0 0; font-weight: bold;">
-                            ⚠️ POR VENCER (${resultado.por_vencer.length})
-                        </div>
-                        <div style="border: 2px solid #fab005; border-top: none; border-radius: 0 0 8px 8px; overflow: hidden;">
-                `;
-
-                resultado.por_vencer.forEach((cliente, index) => {
-                    html += `
-                        <div style="padding: 12px; border-bottom: 1px solid #f8f9fa; ${index % 2 === 0 ? 'background: #fffae6;' : 'background: white;'}">
-                            <div style="font-weight: bold; color: #e67700; margin-bottom: 4px;">${cliente.razon_social}</div>
-                            <div style="font-size: 13px; color: #666;">
-                                RUC: ${cliente.ruc} •
-                                WhatsApp: ${cliente.whatsapp ? (cliente.whatsapp.startsWith('51') ? '+' + cliente.whatsapp : '+51' + cliente.whatsapp) : 'No registrado'} •
-                                Monto: S/ ${cliente.monto} •
-                                <strong style="color: #e67700;">${cliente.dias_restantes} día${cliente.dias_restantes !== 1 ? 's' : ''} restantes</strong>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                html += '</div></div>';
-            }
+            });
 
             container.innerHTML = html;
+
+            // Add focus state to search input
+            const searchInput = document.getElementById('searchClientesNotif');
+            if (searchInput) {
+                searchInput.addEventListener('focus', function() {
+                    this.style.borderColor = '#007AFF';
+                    this.style.boxShadow = '0 0 0 4px rgba(0, 122, 255, 0.1)';
+                });
+                searchInput.addEventListener('blur', function() {
+                    this.style.borderColor = '#d2d2d7';
+                    this.style.boxShadow = 'none';
+                });
+            }
+        }
+
+        function filtrarClientesNotif() {
+            const searchValue = document.getElementById('searchClientesNotif').value.toLowerCase();
+            const cards = document.querySelectorAll('.client-card-enhanced');
+
+            cards.forEach(card => {
+                const clienteData = card.getAttribute('data-cliente');
+                if (clienteData.includes(searchValue)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         }
 
         async function enviarRecordatoriosNotif() {
@@ -2359,6 +2932,339 @@ require_once 'auth/session_check.php';
             // TODO: Implementar eliminación de servicio
         }
 
+        // ============================================
+        // DASHBOARD DE RECORDATORIOS AUTOMÁTICOS
+        // ============================================
+
+        async function cargarEstadisticasRecordatorios() {
+            try {
+                // Cargar estadísticas
+                const response = await fetch('/api/clientes.php?action=estadisticas_recordatorios');
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    const stats = data.data;
+
+                    // Actualizar tarjetas de estadísticas
+                    document.getElementById('stat-vencidos').textContent = stats.vencidos || 0;
+                    document.getElementById('stat-hoy').textContent = stats.vence_hoy || 0;
+                    document.getElementById('stat-por-vencer').textContent = stats.por_vencer || 0;
+                    document.getElementById('stat-enviados').textContent = stats.enviados_hoy || 0;
+
+                    // Actualizar estado del sistema
+                    const estadoBadge = document.getElementById('estado-sistema-badge');
+                    if (stats.sistema_activo) {
+                        estadoBadge.textContent = 'Activo';
+                        estadoBadge.style.background = '#34C759';
+                    } else {
+                        estadoBadge.textContent = 'Pausado';
+                        estadoBadge.style.background = '#FF9500';
+                    }
+                }
+
+                // Cargar detalles del sistema
+                const detalleResponse = await fetch('/api/clientes.php?action=detalle_estado_recordatorios');
+                const detalleData = await detalleResponse.json();
+
+                if (detalleData.success && detalleData.data) {
+                    const detalle = detalleData.data;
+
+                    // Actualizar campos de información
+                    document.getElementById('ultimaEjecucion').textContent = detalle.ultima_ejecucion || 'Sin registros';
+                    document.getElementById('proximaEjecucion').textContent = detalle.proxima_ejecucion || 'No programada';
+                    document.getElementById('diasMinimos').textContent = (detalle.dias_minimos || '3') + ' días';
+                    document.getElementById('maxPorMes').textContent = (detalle.max_por_mes || '8') + ' recordatorios';
+                }
+            } catch (error) {
+                console.error('Error al cargar estadísticas:', error);
+                // Poner valores por defecto en caso de error
+                document.getElementById('ultimaEjecucion').textContent = 'Error al cargar';
+                document.getElementById('proximaEjecucion').textContent = 'Error al cargar';
+            }
+        }
+
+        async function verHistorialRecordatorios() {
+            try {
+                const response = await fetch('/api/clientes.php?action=historial_recordatorios&limit=50');
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    const historial = data.data;
+
+                    let html = `
+                        <div class="modal-overlay" onclick="cerrarModal(event)">
+                            <div class="modal-content" style="max-width: 900px; max-height: 80vh; overflow-y: auto;">
+                                <div class="modal-header">
+                                    <h3>📊 Historial de Recordatorios</h3>
+                                    <button class="modal-close-btn" onclick="cerrarModal(event)">✕</button>
+                                </div>
+                                <div class="modal-body">
+                    `;
+
+                    if (historial.length === 0) {
+                        html += '<p style="text-align: center; color: #666; padding: 40px;">No hay recordatorios en el historial</p>';
+                    } else {
+                        html += `
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                                        <th style="padding: 12px; text-align: left;">Cliente</th>
+                                        <th style="padding: 12px; text-align: center;">Tipo</th>
+                                        <th style="padding: 12px; text-align: center;">Estado</th>
+                                        <th style="padding: 12px; text-align: center;">Fecha</th>
+                                        <th style="padding: 12px; text-align: center;">Automático</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+
+                        historial.forEach(item => {
+                            const estadoColor = item.estado_envio === 'enviado' ? '#34C759' : '#FF3B30';
+                            const estadoTexto = item.estado_envio === 'enviado' ? 'Enviado' : 'Error';
+                            const tipoTexto = item.tipo_recordatorio.charAt(0).toUpperCase() + item.tipo_recordatorio.slice(1);
+                            const fecha = new Date(item.fecha_envio).toLocaleDateString('es-PE');
+
+                            html += `
+                                <tr style="border-bottom: 1px solid #f0f0f0;">
+                                    <td style="padding: 12px;">${item.razon_social}</td>
+                                    <td style="padding: 12px; text-align: center;">
+                                        <span style="background: #007AFF; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
+                                            ${tipoTexto}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: center;">
+                                        <span style="background: ${estadoColor}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
+                                            ${estadoTexto}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: center;">${fecha}</td>
+                                    <td style="padding: 12px; text-align: center;">${item.fue_automatico ? '✅' : '👤'}</td>
+                                </tr>
+                            `;
+                        });
+
+                        html += '</tbody></table>';
+                    }
+
+                    html += `
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    document.body.insertAdjacentHTML('beforeend', html);
+                }
+            } catch (error) {
+                console.error('Error al cargar historial:', error);
+                alert('Error al cargar el historial de recordatorios');
+            }
+        }
+
+        async function configurarRecordatorios() {
+            try {
+                const response = await fetch('/api/clientes.php?action=obtener_config_recordatorios');
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    const config = data.data;
+
+                    let html = `
+                        <div class="modal-overlay" onclick="cerrarModalConfig(event)">
+                            <div class="modal-content" style="max-width: 700px;">
+                                <div class="modal-header">
+                                    <h3>⚙️ Configuración de Recordatorios</h3>
+                                    <button class="modal-close-btn" onclick="cerrarModalConfig(event)">✕</button>
+                                </div>
+                                <div class="modal-body">
+                                    <form id="formConfigRecordatorios" onsubmit="guardarConfiguracion(event)">
+                    `;
+
+                    config.forEach(item => {
+                        const valor = item.valor;
+                        const isBoolean = valor === 'true' || valor === 'false';
+
+                        html += `
+                            <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #f0f0f0;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1d1d1f;">
+                                    ${item.descripcion}
+                                </label>
+                        `;
+
+                        if (isBoolean) {
+                            html += `
+                                <select name="${item.clave}" class="input-field" style="width: 100%;">
+                                    <option value="true" ${valor === 'true' ? 'selected' : ''}>Activado</option>
+                                    <option value="false" ${valor === 'false' ? 'selected' : ''}>Desactivado</option>
+                                </select>
+                            `;
+                        } else {
+                            html += `
+                                <input type="text" name="${item.clave}" value="${valor}" class="input-field" style="width: 100%;">
+                            `;
+                        }
+
+                        html += '</div>';
+                    });
+
+                    html += `
+                                        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                                            <button type="button" onclick="cerrarModalConfig(event)" class="btn-secondary">
+                                                Cancelar
+                                            </button>
+                                            <button type="submit" class="btn-primary">
+                                                💾 Guardar Configuración
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    document.body.insertAdjacentHTML('beforeend', html);
+                }
+            } catch (error) {
+                console.error('Error al cargar configuración:', error);
+                alert('Error al cargar la configuración');
+            }
+        }
+
+        async function guardarConfiguracion(event) {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const config = {};
+
+            for (let [key, value] of formData.entries()) {
+                config[key] = value;
+            }
+
+            try {
+                const response = await fetch('/api/clientes.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'actualizar_config_recordatorios',
+                        config: config
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Primero recargar estadísticas, luego cerrar modal
+                    await cargarEstadisticasRecordatorios();
+                    cerrarModalConfig();
+                    alert('✅ Configuración guardada exitosamente\n\nLos cambios se reflejarán en el dashboard.');
+                } else {
+                    alert('❌ Error: ' + (data.error || 'No se pudo guardar la configuración'));
+                }
+            } catch (error) {
+                console.error('Error al guardar configuración:', error);
+                alert('❌ Error al guardar la configuración');
+            }
+        }
+
+        function cerrarModalConfig(event) {
+            if (event && event.target !== event.currentTarget && event.target.className !== 'modal-close-btn') {
+                return;
+            }
+            const modal = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function cerrarModal(event) {
+            if (event && event.target !== event.currentTarget && event.target.className !== 'modal-close-btn') {
+                return;
+            }
+            const modal = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        async function verDetalleEstado() {
+            try {
+                const response = await fetch('/api/clientes.php?action=detalle_estado_recordatorios');
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    const detalle = data.data;
+
+                    let html = `
+                        <div class="modal-overlay" onclick="cerrarModal(event)">
+                            <div class="modal-content" style="max-width: 600px;">
+                                <div class="modal-header">
+                                    <h3>🔍 Detalle del Estado</h3>
+                                    <button class="modal-close-btn" onclick="cerrarModal(event)">✕</button>
+                                </div>
+                                <div class="modal-body">
+                                    <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                                        <h4 style="margin: 0 0 16px 0; color: #1d1d1f;">Estado del Sistema</h4>
+                                        <div style="display: grid; gap: 12px;">
+                                            <div style="display: flex; justify-content: space-between;">
+                                                <span style="color: #666;">Estado:</span>
+                                                <strong style="color: ${detalle.sistema_activo ? '#34C759' : '#FF9500'};">
+                                                    ${detalle.sistema_activo ? 'Activo ✅' : 'Pausado ⏸️'}
+                                                </strong>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between;">
+                                                <span style="color: #666;">Última ejecución:</span>
+                                                <strong>${detalle.ultima_ejecucion || 'Sin registros'}</strong>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between;">
+                                                <span style="color: #666;">Próxima ejecución:</span>
+                                                <strong>${detalle.proxima_ejecucion || 'No programada'}</strong>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between;">
+                                                <span style="color: #666;">Hora configurada:</span>
+                                                <strong>${detalle.hora_envio || '09:00'}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style="background: #fff; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px;">
+                                        <h4 style="margin: 0 0 16px 0; color: #1d1d1f;">Límites Configurados</h4>
+                                        <div style="display: grid; gap: 12px;">
+                                            <div style="display: flex; justify-content: space-between;">
+                                                <span style="color: #666;">Días mínimos entre recordatorios:</span>
+                                                <strong>${detalle.dias_minimos || 3} días</strong>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between;">
+                                                <span style="color: #666;">Máximo recordatorios por mes:</span>
+                                                <strong>${detalle.max_por_mes || 8} recordatorios</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    document.body.insertAdjacentHTML('beforeend', html);
+                }
+            } catch (error) {
+                console.error('Error al cargar detalle:', error);
+                alert('Error al cargar el detalle del estado');
+            }
+        }
+
+        async function actualizarEstadisticas() {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '🔄 Actualizando...';
+            btn.disabled = true;
+
+            await cargarEstadisticasRecordatorios();
+
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }, 1000);
+        }
+
         // Toggle user menu
         function toggleUserMenu() {
             const userMenu = document.getElementById('userMenu');
@@ -2370,6 +3276,29 @@ require_once 'auth/session_check.php';
             const userMenu = document.getElementById('userMenu');
             if (userMenu && !userMenu.contains(event.target)) {
                 userMenu.classList.remove('active');
+            }
+        });
+
+        // Cargar estadísticas al iniciar si estamos en la página de notificaciones
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cargar inmediatamente si ya estamos en la pestaña de notificaciones
+            setTimeout(() => {
+                const dashboardVisible = document.getElementById('stat-vencidos');
+                if (dashboardVisible && dashboardVisible.offsetParent !== null) {
+                    cargarEstadisticasRecordatorios();
+                }
+            }, 200);
+
+            // Observar cuando se cambia a la pestaña de notificaciones
+            const notificacionesTab = document.querySelector('[onclick="mostrarPagina(\'notificaciones\')"]');
+            if (notificacionesTab) {
+                notificacionesTab.addEventListener('click', function() {
+                    setTimeout(() => {
+                        if (document.getElementById('stat-vencidos')) {
+                            cargarEstadisticasRecordatorios();
+                        }
+                    }, 100);
+                });
             }
         });
     </script>

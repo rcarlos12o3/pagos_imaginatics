@@ -1,0 +1,101 @@
+# ============================================
+# CONFIGURACIÓN CRON - RECORDATORIOS AUTOMÁTICOS
+# Sistema de Pagos Imaginatics Peru SAC
+# ============================================
+
+# Este archivo contiene ejemplos de configuración de cron para diferentes entornos
+
+# ============================================
+# IMPORTANTE: Configurar variables de entorno
+# ============================================
+
+# Ruta absoluta al proyecto (MODIFICAR SEGÚN TU INSTALACIÓN)
+PROJECT_PATH=/Users/pxndx1o2/Herd/pagos_imaginatics
+
+# Ruta al ejecutable de PHP (MODIFICAR SEGÚN TU INSTALACIÓN)
+PHP_BIN=/usr/bin/php
+# O en macOS con Homebrew: /opt/homebrew/bin/php
+# O en sistemas con XAMPP: /Applications/XAMPP/bin/php
+
+# Ruta al archivo de logs
+LOG_FILE=/Users/pxndx1o2/Herd/pagos_imaginatics/logs/recordatorios_auto.log
+
+# ============================================
+# EJEMPLO 1: Ejecución diaria a las 9:00 AM
+# ============================================
+# Ejecuta el script de recordatorios automáticos todos los días a las 9:00 AM
+# Formato: minuto hora día_mes mes día_semana comando
+
+0 9 * * * /usr/bin/php /Users/pxndx1o2/Herd/pagos_imaginatics/api/enviar_recordatorios_auto.php >> /Users/pxndx1o2/Herd/pagos_imaginatics/logs/recordatorios_auto.log 2>&1
+
+# ============================================
+# EJEMPLO 2: Ejecución diaria a las 9:00 AM con manejo de errores
+# ============================================
+# Redirige tanto stdout como stderr al log, y envía email si falla
+
+0 9 * * * /usr/bin/php /Users/pxndx1o2/Herd/pagos_imaginatics/api/enviar_recordatorios_auto.php >> /Users/pxndx1o2/Herd/pagos_imaginatics/logs/recordatorios_auto.log 2>&1 || echo "Error en recordatorios automáticos" | mail -s "Error Cron" admin@imaginatics.pe
+
+# ============================================
+# EJEMPLO 3: Ejecución dos veces al día (9 AM y 3 PM)
+# ============================================
+# Útil para asegurar mayor cobertura de envíos
+
+0 9,15 * * * /usr/bin/php /Users/pxndx1o2/Herd/pagos_imaginatics/api/enviar_recordatorios_auto.php >> /Users/pxndx1o2/Herd/pagos_imaginatics/logs/recordatorios_auto.log 2>&1
+
+# ============================================
+# EJEMPLO 4: Ejecución solo en días laborables
+# ============================================
+# Ejecuta de lunes a viernes a las 9 AM
+
+0 9 * * 1-5 /usr/bin/php /Users/pxndx1o2/Herd/pagos_imaginatics/api/enviar_recordatorios_auto.php >> /Users/pxndx1o2/Herd/pagos_imaginatics/logs/recordatorios_auto.log 2>&1
+
+# ============================================
+# EJEMPLO 5: Ejecución con variables de entorno
+# ============================================
+# Define variables antes de ejecutar
+
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+MAILTO=admin@imaginatics.pe
+
+0 9 * * * cd /Users/pxndx1o2/Herd/pagos_imaginatics && /usr/bin/php api/enviar_recordatorios_auto.php >> logs/recordatorios_auto.log 2>&1
+
+# ============================================
+# ROTACIÓN DE LOGS (OPCIONAL)
+# ============================================
+# Limpia logs antiguos (ejecuta el primer día de cada mes a las 2 AM)
+
+0 2 1 * * find /Users/pxndx1o2/Herd/pagos_imaginatics/logs -name "recordatorios_auto.log.*" -mtime +30 -delete
+
+# ============================================
+# NOTAS IMPORTANTES
+# ============================================
+#
+# 1. Formato de cron: minuto hora día_mes mes día_semana comando
+#    - minuto: 0-59
+#    - hora: 0-23
+#    - día_mes: 1-31
+#    - mes: 1-12
+#    - día_semana: 0-7 (0 o 7 = domingo)
+#    - * = cualquier valor
+#    - */n = cada n unidades
+#    - a,b,c = lista de valores
+#    - a-b = rango de valores
+#
+# 2. El símbolo >> agrega al archivo de log
+#    El símbolo > sobrescribe el archivo de log
+#
+# 3. 2>&1 redirige stderr (errores) a stdout (salida estándar)
+#    para que ambos se guarden en el mismo log
+#
+# 4. SIEMPRE usar rutas absolutas en cron
+#
+# 5. Para verificar que el cron está configurado:
+#    crontab -l
+#
+# 6. Para ver los logs del sistema de cron:
+#    tail -f /var/log/syslog (Linux)
+#    tail -f /var/log/cron (CentOS/RHEL)
+#    log show --predicate 'process == "cron"' --last 1h (macOS)
+#
+# ============================================

@@ -82,6 +82,18 @@ function handleGet($database) {
         case 'analizar_envios_pendientes':
             analizarEnviosPendientes($database);
             break;
+        case 'estadisticas_recordatorios':
+            getEstadisticasRecordatorios($database);
+            break;
+        case 'historial_recordatorios':
+            getHistorialRecordatorios($database);
+            break;
+        case 'obtener_config_recordatorios':
+            getConfigRecordatorios($database);
+            break;
+        case 'detalle_estado_recordatorios':
+            getDetalleEstadoRecordatorios($database);
+            break;
         default:
             jsonResponse(['success' => false, 'error' => 'Acción no válida'], 400);
     }
@@ -464,6 +476,9 @@ function handlePost($database, $input) {
             break;
         case 'registrar_pago':
             registrarPago($database, $input);
+            break;
+        case 'actualizar_config_recordatorios':
+            actualizarConfigRecordatorios($database, $input);
             break;
         default:
             jsonResponse(['success' => false, 'error' => 'Acción no válida'], 400);
@@ -1575,5 +1590,213 @@ function buscarOrdenesAtrasadas($servicio, $database) {
     // Por ahora devolvemos vacío, esto se puede implementar más adelante
     // Requeriría revisar historial de envíos vs periodos transcurridos
     return [];
+}
+
+// ============================================
+// API ENDPOINTS PARA DASHBOARD DE RECORDATORIOS
+// ============================================
+
+/**
+ * Obtener estadísticas para el dashboard de recordatorios
+ */
+function getEstadisticasRecordatorios($database) {
+    try {
+        // Obtener configuración del sistema desde config_recordatorios
+        $configSistemaActivo = $database->fetch(
+            "SELECT valor FROM config_recordatorios WHERE clave = 'recordatorios_automaticos_activos'"
+        );
+        $sistemaActivo = ($configSistemaActivo && $configSistemaActivo['valor'] === 'true');
+
+        // Contar servicios vencidos (fecha_vencimiento < HOY)
+        $vencidos = $database->fetch(
+            "SELECT COUNT(*) as total
+             FROM servicios_contratados
+             WHERE activo = 1 AND fecha_vencimiento < CURDATE()"
+        );
+
+        // Contar servicios que vencen hoy
+        $venceHoy = $database->fetch(
+            "SELECT COUNT(*) as total
+             FROM servicios_contratados
+             WHERE activo = 1 AND DATE(fecha_vencimiento) = CURDATE()"
+        );
+
+        // Contar servicios por vencer (próximos 7 días)
+        $porVencer = $database->fetch(
+            "SELECT COUNT(*) as total
+             FROM servicios_contratados
+             WHERE activo = 1
+             AND fecha_vencimiento > CURDATE()
+             AND fecha_vencimiento <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)"
+        );
+
+        // Contar recordatorios enviados hoy
+        $enviadosHoy = $database->fetch(
+            "SELECT COUNT(*) as total
+             FROM historial_recordatorios
+             WHERE DATE(fecha_envio) = CURDATE()
+             AND estado_envio = 'enviado'"
+        );
+
+        jsonResponse([
+            'success' => true,
+            'data' => [
+                'sistema_activo' => $sistemaActivo,
+                'vencidos' => (int)($vencidos['total'] ?? 0),
+                'vence_hoy' => (int)($venceHoy['total'] ?? 0),
+                'por_vencer' => (int)($porVencer['total'] ?? 0),
+                'enviados_hoy' => (int)($enviadosHoy['total'] ?? 0)
+            ]
+        ]);
+    } catch (Exception $e) {
+        $database->log('error', 'recordatorios', 'Error al obtener estadísticas: ' . $e->getMessage());
+        jsonResponse(['success' => false, 'error' => 'Error al obtener estadísticas'], 500);
+    }
+}
+
+/**
+ * Obtener historial de recordatorios enviados
+ */
+function getHistorialRecordatorios($database) {
+    try {
+        $limit = $_GET['limit'] ?? 50;
+
+        $historial = $database->fetchAll(
+            "SELECT
+                hr.*,
+                c.razon_social,
+                c.ruc
+             FROM historial_recordatorios hr
+             INNER JOIN clientes c ON hr.cliente_id = c.id
+             ORDER BY hr.fecha_envio DESC
+             LIMIT ?",
+            [$limit]
+        );
+
+        jsonResponse([
+            'success' => true,
+            'data' => $historial
+        ]);
+    } catch (Exception $e) {
+        $database->log('error', 'recordatorios', 'Error al obtener historial: ' . $e->getMessage());
+        jsonResponse(['success' => false, 'error' => 'Error al obtener historial'], 500);
+    }
+}
+
+/**
+ * Obtener configuración de recordatorios
+ */
+function getConfigRecordatorios($database) {
+    try {
+        $config = $database->fetchAll(
+            "SELECT clave, valor, descripcion
+             FROM config_recordatorios
+             ORDER BY id"
+        );
+
+        jsonResponse([
+            'success' => true,
+            'data' => $config
+        ]);
+    } catch (Exception $e) {
+        $database->log('error', 'recordatorios', 'Error al obtener configuración: ' . $e->getMessage());
+        jsonResponse(['success' => false, 'error' => 'Error al obtener configuración'], 500);
+    }
+}
+
+/**
+ * Actualizar configuración de recordatorios
+ */
+function actualizarConfigRecordatorios($database, $input) {
+    try {
+        if (!isset($input['config']) || !is_array($input['config'])) {
+            jsonResponse(['success' => false, 'error' => 'Configuración inválida'], 400);
+            return;
+        }
+
+        $config = $input['config'];
+        $actualizados = 0;
+
+        foreach ($config as $clave => $valor) {
+            $result = $database->query(
+                "UPDATE config_recordatorios SET valor = ? WHERE clave = ?",
+                [$valor, $clave]
+            );
+
+            if ($result) {
+                $actualizados++;
+            }
+        }
+
+        $database->log('info', 'recordatorios', "Configuración actualizada: $actualizados parámetros");
+
+        jsonResponse([
+            'success' => true,
+            'message' => "Se actualizaron $actualizados parámetros correctamente",
+            'actualizados' => $actualizados
+        ]);
+    } catch (Exception $e) {
+        $database->log('error', 'recordatorios', 'Error al actualizar configuración: ' . $e->getMessage());
+        jsonResponse(['success' => false, 'error' => 'Error al actualizar configuración'], 500);
+    }
+}
+
+/**
+ * Obtener detalle del estado del sistema de recordatorios
+ */
+function getDetalleEstadoRecordatorios($database) {
+    try {
+        // Obtener configuración desde config_recordatorios
+        $config = $database->fetchAll("SELECT clave, valor FROM config_recordatorios");
+        $configMap = [];
+        foreach ($config as $item) {
+            $configMap[$item['clave']] = $item['valor'];
+        }
+
+        $sistemaActivo = ($configMap['recordatorios_automaticos_activos'] === 'true');
+        $horaEnvio = $configMap['hora_envio_automatico'] ?? '09:00';
+        $diasMinimos = $configMap['dias_minimos_entre_recordatorios'] ?? '3';
+        $maxPorMes = $configMap['max_recordatorios_mes'] ?? '8';
+
+        // Obtener última ejecución del log
+        $ultimaEjecucion = $database->fetch(
+            "SELECT MAX(fecha_log) as ultima
+             FROM logs_sistema
+             WHERE modulo = 'recordatorios_auto'
+             AND mensaje LIKE '%completada%'"
+        );
+
+        $ultimaEjecucionTexto = 'Sin registros';
+        if ($ultimaEjecucion && $ultimaEjecucion['ultima']) {
+            $fecha = new DateTime($ultimaEjecucion['ultima']);
+            $ultimaEjecucionTexto = $fecha->format('d/m/Y H:i:s');
+        }
+
+        // Calcular próxima ejecución (hoy o mañana a la hora configurada)
+        $ahora = new DateTime();
+        $horaConfigParts = explode(':', $horaEnvio);
+        $proximaEjecucion = new DateTime();
+        $proximaEjecucion->setTime((int)$horaConfigParts[0], (int)$horaConfigParts[1]);
+
+        // Si ya pasó la hora de hoy, la próxima es mañana
+        if ($proximaEjecucion < $ahora) {
+            $proximaEjecucion->modify('+1 day');
+        }
+
+        jsonResponse([
+            'success' => true,
+            'data' => [
+                'sistema_activo' => $sistemaActivo,
+                'ultima_ejecucion' => $ultimaEjecucionTexto,
+                'proxima_ejecucion' => $proximaEjecucion->format('d/m/Y H:i:s'),
+                'hora_envio' => $horaEnvio,
+                'dias_minimos' => $diasMinimos,
+                'max_por_mes' => $maxPorMes
+            ]
+        ]);
+    } catch (Exception $e) {
+        $database->log('error', 'recordatorios', 'Error al obtener detalle del estado: ' . $e->getMessage());
+        jsonResponse(['success' => false, 'error' => 'Error al obtener detalle del estado'], 500);
+    }
 }
 ?>
