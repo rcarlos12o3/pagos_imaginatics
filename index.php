@@ -1883,6 +1883,9 @@ require_once 'auth/session_check.php';
                 if (typeof ModuloEnvios !== 'undefined') {
                     ModuloEnvios.init();
                 }
+            } else if (pageName === 'notificaciones') {
+                // Cargar estadísticas de recordatorios
+                setTimeout(cargarEstadisticasRecordatoriosWrapper, 100);
             }
         }
 
@@ -2945,20 +2948,31 @@ require_once 'auth/session_check.php';
                 if (data.success && data.data) {
                     const stats = data.data;
 
-                    // Actualizar tarjetas de estadísticas
-                    document.getElementById('stat-vencidos').textContent = stats.vencidos || 0;
-                    document.getElementById('stat-hoy').textContent = stats.vence_hoy || 0;
-                    document.getElementById('stat-por-vencer').textContent = stats.por_vencer || 0;
-                    document.getElementById('stat-enviados').textContent = stats.enviados_hoy || 0;
+                    // Actualizar tarjetas de estadísticas (IDs correctos en camelCase)
+                    const statVencidos = document.getElementById('statVencidos');
+                    const statHoy = document.getElementById('statVenceHoy');
+                    const statPorVencer = document.getElementById('statPorVencer');
+                    const statEnviados = document.getElementById('statEnviados');
+
+                    if (statVencidos) statVencidos.textContent = stats.vencidos || 0;
+                    if (statHoy) statHoy.textContent = stats.vence_hoy || 0;
+                    if (statPorVencer) statPorVencer.textContent = stats.por_vencer || 0;
+                    if (statEnviados) statEnviados.textContent = stats.enviados_hoy || 0;
 
                     // Actualizar estado del sistema
-                    const estadoBadge = document.getElementById('estado-sistema-badge');
-                    if (stats.sistema_activo) {
-                        estadoBadge.textContent = 'Activo';
-                        estadoBadge.style.background = '#34C759';
-                    } else {
-                        estadoBadge.textContent = 'Pausado';
-                        estadoBadge.style.background = '#FF9500';
+                    const estadoBadge = document.getElementById('autoStatusBadge');
+                    if (estadoBadge) {
+                        const statusText = estadoBadge.querySelector('span:last-child');
+                        if (statusText) {
+                            statusText.textContent = stats.sistema_activo ? 'ACTIVO' : 'PAUSADO';
+                        }
+                        if (stats.sistema_activo) {
+                            estadoBadge.classList.add('active');
+                            estadoBadge.classList.remove('inactive');
+                        } else {
+                            estadoBadge.classList.add('inactive');
+                            estadoBadge.classList.remove('active');
+                        }
                     }
                 }
 
@@ -3279,28 +3293,22 @@ require_once 'auth/session_check.php';
             }
         });
 
-        // Cargar estadísticas al iniciar si estamos en la página de notificaciones
-        document.addEventListener('DOMContentLoaded', function() {
-            // Cargar inmediatamente si ya estamos en la pestaña de notificaciones
-            setTimeout(() => {
-                const dashboardVisible = document.getElementById('stat-vencidos');
-                if (dashboardVisible && dashboardVisible.offsetParent !== null) {
-                    cargarEstadisticasRecordatorios();
-                }
-            }, 200);
+        // Cargar estadísticas de recordatorios cuando se muestra la pestaña
+        function cargarEstadisticasRecordatoriosWrapper() {
+            console.log('🔄 Intentando cargar estadísticas de recordatorios...');
 
-            // Observar cuando se cambia a la pestaña de notificaciones
-            const notificacionesTab = document.querySelector('[onclick="mostrarPagina(\'notificaciones\')"]');
-            if (notificacionesTab) {
-                notificacionesTab.addEventListener('click', function() {
-                    setTimeout(() => {
-                        if (document.getElementById('stat-vencidos')) {
-                            cargarEstadisticasRecordatorios();
-                        }
-                    }, 100);
-                });
+            // Verificar si la pestaña de notificaciones está visible
+            const notificacionesPage = document.getElementById('page-notificaciones');
+            if (notificacionesPage && notificacionesPage.classList.contains('active')) {
+                console.log('✅ Página de notificaciones activa, cargando estadísticas...');
+                cargarEstadisticasRecordatorios();
+            } else {
+                console.log('⏭️ Página de notificaciones no está activa aún');
             }
-        });
+        }
+
+        // Función global para que se pueda llamar desde el onclick del tab
+        window.cargarEstadisticasRecordatoriosWrapper = cargarEstadisticasRecordatoriosWrapper;
     </script>
 </body>
 
