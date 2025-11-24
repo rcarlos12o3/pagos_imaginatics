@@ -1443,22 +1443,14 @@ function analizarServicio($servicio, $hoy, $database) {
         $diasHastaVencer = -$diasHastaVencer; // Negativo si ya venció
     }
 
-    // Determinar días de anticipación según periodicidad
-    $diasAnticipacion = 0;
-    switch ($periodo) {
-        case 'mensual':
-            $diasAnticipacion = 4;
-            break;
-        case 'trimestral':
-            $diasAnticipacion = 7;
-            break;
-        case 'semestral':
-            $diasAnticipacion = 15;
-            break;
-        case 'anual':
-            $diasAnticipacion = 30;
-            break;
-    }
+    // Obtener días de anticipación desde tabla de reglas (centralizado)
+    $regla = $database->fetch(
+        "SELECT dias_anticipacion_op, dias_urgente, dias_critico, max_dias_mora
+         FROM reglas_recordatorio_periodicidad
+         WHERE periodo_facturacion = ?",
+        [$periodo]
+    );
+    $diasAnticipacion = $regla ? (int)$regla['dias_anticipacion_op'] : 7; // Default 7 si no existe
 
     // Calcular fecha ideal de envío
     $fechaIdealEnvio = clone $fechaVencimiento;

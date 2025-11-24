@@ -764,9 +764,11 @@ require_once 'auth/session_check.php';
             box-shadow: 0 2px 8px rgba(52, 199, 89, 0.3);
         }
 
+        .auto-status-badge.paused,
         .auto-status-badge.inactive {
-            background: #e5e5e7;
-            color: #86868b;
+            background: linear-gradient(135deg, #FF9500 0%, #FF8000 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(255, 149, 0, 0.3);
         }
 
         .auto-status-dot {
@@ -2667,7 +2669,7 @@ require_once 'auth/session_check.php';
                                 </div>
                             </div>
                             <div style="display: flex; gap: 5px;">
-                                <button onclick="editarServicioUsuario(${servicio.contrato_id})"
+                                <button onclick="ServiciosUI.editarServicio(${servicio.contrato_id})"
                                         class="usuario-action-btn"
                                         title="Editar servicio">
                                     ✏️
@@ -2919,11 +2921,6 @@ require_once 'auth/session_check.php';
             }
         }
 
-        function editarServicioUsuario(servicioId) {
-            alert('Funcionalidad de editar servicio en desarrollo - ID: ' + servicioId);
-            // TODO: Implementar modal para editar servicio
-        }
-
         function eliminarServicioUsuario(servicioId) {
             if (!confirm('¿Estás seguro de eliminar este servicio?')) {
                 return;
@@ -2945,20 +2942,30 @@ require_once 'auth/session_check.php';
                 if (data.success && data.data) {
                     const stats = data.data;
 
-                    // Actualizar tarjetas de estadísticas
-                    document.getElementById('stat-vencidos').textContent = stats.vencidos || 0;
-                    document.getElementById('stat-hoy').textContent = stats.vence_hoy || 0;
-                    document.getElementById('stat-por-vencer').textContent = stats.por_vencer || 0;
-                    document.getElementById('stat-enviados').textContent = stats.enviados_hoy || 0;
+                    // Actualizar tarjetas de estadísticas con validación
+                    const statVencidos = document.getElementById('statVencidos');
+                    const statVenceHoy = document.getElementById('statVenceHoy');
+                    const statPorVencer = document.getElementById('statPorVencer');
+                    const statEnviados = document.getElementById('statEnviados');
+
+                    if (statVencidos) statVencidos.textContent = stats.vencidos || 0;
+                    if (statVenceHoy) statVenceHoy.textContent = stats.vence_hoy || 0;
+                    if (statPorVencer) statPorVencer.textContent = stats.por_vencer || 0;
+                    if (statEnviados) statEnviados.textContent = stats.enviados_hoy || 0;
 
                     // Actualizar estado del sistema
-                    const estadoBadge = document.getElementById('estado-sistema-badge');
-                    if (stats.sistema_activo) {
-                        estadoBadge.textContent = 'Activo';
-                        estadoBadge.style.background = '#34C759';
-                    } else {
-                        estadoBadge.textContent = 'Pausado';
-                        estadoBadge.style.background = '#FF9500';
+                    const autoStatusBadge = document.getElementById('autoStatusBadge');
+                    if (autoStatusBadge) {
+                        const statusText = autoStatusBadge.querySelector('span:last-child');
+                        if (statusText) {
+                            if (stats.sistema_activo) {
+                                statusText.textContent = 'ACTIVO';
+                                autoStatusBadge.className = 'auto-status-badge active';
+                            } else {
+                                statusText.textContent = 'PAUSADO';
+                                autoStatusBadge.className = 'auto-status-badge paused';
+                            }
+                        }
                     }
                 }
 
@@ -2969,17 +2976,24 @@ require_once 'auth/session_check.php';
                 if (detalleData.success && detalleData.data) {
                     const detalle = detalleData.data;
 
-                    // Actualizar campos de información
-                    document.getElementById('ultimaEjecucion').textContent = detalle.ultima_ejecucion || 'Sin registros';
-                    document.getElementById('proximaEjecucion').textContent = detalle.proxima_ejecucion || 'No programada';
-                    document.getElementById('diasMinimos').textContent = (detalle.dias_minimos || '3') + ' días';
-                    document.getElementById('maxPorMes').textContent = (detalle.max_por_mes || '8') + ' recordatorios';
+                    // Actualizar campos de información con validación
+                    const ultimaEjecucion = document.getElementById('ultimaEjecucion');
+                    const proximaEjecucion = document.getElementById('proximaEjecucion');
+                    const diasMinimos = document.getElementById('diasMinimos');
+                    const maxPorMes = document.getElementById('maxPorMes');
+
+                    if (ultimaEjecucion) ultimaEjecucion.textContent = detalle.ultima_ejecucion || 'Sin registros';
+                    if (proximaEjecucion) proximaEjecucion.textContent = detalle.proxima_ejecucion || 'No programada';
+                    if (diasMinimos) diasMinimos.textContent = (detalle.dias_minimos || '3') + ' días';
+                    if (maxPorMes) maxPorMes.textContent = (detalle.max_por_mes || '8') + ' recordatorios';
                 }
             } catch (error) {
                 console.error('Error al cargar estadísticas:', error);
-                // Poner valores por defecto en caso de error
-                document.getElementById('ultimaEjecucion').textContent = 'Error al cargar';
-                document.getElementById('proximaEjecucion').textContent = 'Error al cargar';
+                // Poner valores por defecto en caso de error con validación
+                const ultimaEjecucion = document.getElementById('ultimaEjecucion');
+                const proximaEjecucion = document.getElementById('proximaEjecucion');
+                if (ultimaEjecucion) ultimaEjecucion.textContent = 'Error al cargar';
+                if (proximaEjecucion) proximaEjecucion.textContent = 'Error al cargar';
             }
         }
 
@@ -3283,8 +3297,8 @@ require_once 'auth/session_check.php';
         document.addEventListener('DOMContentLoaded', function() {
             // Cargar inmediatamente si ya estamos en la pestaña de notificaciones
             setTimeout(() => {
-                const dashboardVisible = document.getElementById('stat-vencidos');
-                if (dashboardVisible && dashboardVisible.offsetParent !== null) {
+                const statVencidos = document.getElementById('statVencidos');
+                if (statVencidos && statVencidos.offsetParent !== null) {
                     cargarEstadisticasRecordatorios();
                 }
             }, 200);
@@ -3294,13 +3308,30 @@ require_once 'auth/session_check.php';
             if (notificacionesTab) {
                 notificacionesTab.addEventListener('click', function() {
                     setTimeout(() => {
-                        if (document.getElementById('stat-vencidos')) {
+                        const statVencidos = document.getElementById('statVencidos');
+                        if (statVencidos) {
                             cargarEstadisticasRecordatorios();
                         }
                     }, 100);
                 });
             }
         });
+
+        // Hook en la función mostrarPagina para detectar navegación
+        const originalMostrarPagina = window.mostrarPagina;
+        if (typeof originalMostrarPagina === 'function') {
+            window.mostrarPagina = function(pagina) {
+                originalMostrarPagina(pagina);
+                if (pagina === 'notificaciones') {
+                    setTimeout(() => {
+                        const statVencidos = document.getElementById('statVencidos');
+                        if (statVencidos) {
+                            cargarEstadisticasRecordatorios();
+                        }
+                    }, 100);
+                }
+            };
+        }
     </script>
 </body>
 

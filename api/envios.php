@@ -1402,13 +1402,14 @@ function crearSesionCola($database, $input) {
 
             $database->insert("
                 INSERT INTO cola_envios (
-                    sesion_id, cliente_id, tipo_envio, prioridad,
+                    sesion_id, cliente_id, servicio_contratado_id, tipo_envio, prioridad,
                     ruc, razon_social, whatsapp, monto, fecha_vencimiento, tipo_servicio,
                     mensaje_texto, imagen_base64, dias_restantes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ", [
                 $sesionId,
                 $cliente['id'],
+                $cliente['contrato_id'] ?? null, // Vincular con servicio específico
                 $input['tipo_envio'],
                 $cliente['prioridad'] ?? 0,
                 $cliente['ruc'],

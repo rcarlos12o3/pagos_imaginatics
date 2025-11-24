@@ -239,13 +239,14 @@ function procesarEnvio($trabajo, $database) {
 
         log_mensaje("      ✅ Texto enviado");
 
-        // 3. Registrar en envios_whatsapp
+        // 3. Registrar en envios_whatsapp (incluyendo servicio_contratado_id para vincular con el servicio)
         $envioId = $database->insert("
             INSERT INTO envios_whatsapp
-            (cliente_id, numero_destino, tipo_envio, estado, respuesta_api, imagen_generada, mensaje_texto)
-            VALUES (?, ?, ?, 'enviado', ?, ?, ?)
+            (cliente_id, servicio_contratado_id, numero_destino, tipo_envio, estado, respuesta_api, imagen_generada, mensaje_texto)
+            VALUES (?, ?, ?, ?, 'enviado', ?, ?, ?)
         ", [
             $trabajo['cliente_id'],
+            $trabajo['servicio_contratado_id'] ?? null, // Vincular con servicio específico
             $numero,
             $trabajo['tipo_envio'],
             json_encode($resultadoTexto['response']),
