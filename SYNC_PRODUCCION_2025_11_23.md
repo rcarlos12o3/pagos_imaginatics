@@ -281,8 +281,8 @@ DESCRIBE cola_envios;
 
 ## ARCHIVOS DE MIGRACIÓN CREADOS EN LOCAL
 
-- `migrations/008_validar_op_antes_recordatorio.sql`
-- `migrations/009_agregar_servicio_contratado_id_cola.sql`
-- `migrations/010_reglas_periodicidad_centralizadas.sql`
+- `migrations/012_validar_op_antes_recordatorio.sql`
+- `migrations/013_agregar_servicio_contratado_id_cola.sql`
+- `migrations/014_reglas_periodicidad_centralizadas.sql`
 
 Puedes hacer `git pull` y ejecutar las migraciones en orden, o aplicar los SQLs de este documento directamente.
