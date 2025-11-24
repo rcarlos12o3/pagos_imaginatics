@@ -8,10 +8,10 @@
 require_once __DIR__ . '/init.php';
 
 // Configuración de la base de datos
-define('DB_HOST', '127.0.0.1');
+define('DB_HOST', 'mysql'); // Host de MySQL en Docker
 define('DB_NAME', 'imaginatics_ruc');
-define('DB_USER', 'root'); // Usuario local
-define('DB_PASS', '');     // Sin contraseña para MySQL local
+define('DB_USER', 'root');
+define('DB_PASS', 'imaginatics123'); // Contraseña de MySQL en Docker
 define('DB_CHARSET', 'utf8mb4');
 
 // Configuración de errores
@@ -52,12 +52,16 @@ class Database {
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
             ];
 
             $this->pdo = new PDO($dsn, $this->username, $this->password, $options);
-            
-            // Configurar zona horaria de MySQL a Lima, Perú
+
+            // Configurar charset y zona horaria de MySQL
+            $this->pdo->exec("SET character_set_client = utf8mb4");
+            $this->pdo->exec("SET character_set_connection = utf8mb4");
+            $this->pdo->exec("SET character_set_results = utf8mb4");
+            $this->pdo->exec("SET collation_connection = utf8mb4_unicode_ci");
             $this->pdo->exec("SET time_zone = '-05:00'"); // UTC-5 para Perú
 
         } catch(PDOException $e) {

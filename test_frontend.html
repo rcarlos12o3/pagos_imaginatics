@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Verificar Carga de Clientes</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f7;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { color: #1d1d1f; margin-bottom: 8px; }
+        h2 { color: #2581c4; margin-top: 0; }
+        .status {
+            padding: 8px 16px;
+            border-radius: 6px;
+            display: inline-block;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        th {
+            background: #f8f8f8;
+            font-weight: 600;
+        }
+        .monto-pen { color: #198754; font-weight: 600; }
+        .monto-usd { color: #0d6efd; font-weight: 600; }
+        .sin-servicios { color: #6c757d; font-style: italic; }
+        button {
+            background: #2581c4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover {
+            background: #1e6fa3;
+        }
+        pre {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🧪 Test de Verificación de Clientes</h1>
+        <p>Esta página verifica que el API está devolviendo correctamente los datos de clientes con sus montos.</p>
+        <button onclick="cargarDatos()">🔄 Cargar Datos del API</button>
+    </div>
+
+    <div id="resultado"></div>
+
+    <script>
+        async function cargarDatos() {
+            const resultado = document.getElementById('resultado');
+            resultado.innerHTML = '<div class="card"><div class="status info">⏳ Cargando datos del API...</div></div>';
+
+            try {
+                const response = await fetch('/api/clientes.php?action=list&limit=100&_t=' + Date.now());
+                const data = await response.json();
+
+                if (!data.success) {
+                    resultado.innerHTML = `
+                        <div class="card">
+                            <div class="status error">❌ Error: ${data.error}</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const clientes = data.data;
+                const conServicios = clientes.filter(c =>
+                    parseFloat(c.monto_pen || 0) > 0 || parseFloat(c.monto_usd || 0) > 0
+                );
+                const sinServicios = clientes.filter(c =>
+                    parseFloat(c.monto_pen || 0) === 0 && parseFloat(c.monto_usd || 0) === 0
+                );
+
+                let html = `
+                    <div class="card">
+                        <h2>✅ Datos Cargados Correctamente</h2>
+                        <div class="status success">Total de clientes: ${clientes.length}</div>
+                        <div class="status success">Con servicios activos: ${conServicios.length}</div>
+                        <div class="status info">Sin servicios activos: ${sinServicios.length}</div>
+                    </div>
+
+                    <div class="card">
+                        <h2>📊 Primeros 10 Clientes con Servicios</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Empresa</th>
+                                    <th>Monto PEN</th>
+                                    <th>Monto USD</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                conServicios.slice(0, 10).forEach(c => {
+                    const montoPen = parseFloat(c.monto_pen || 0);
+                    const montoUsd = parseFloat(c.monto_usd || 0);
+                    const total = montoPen + montoUsd;
+
+                    html += `
+                        <tr>
+                            <td>${c.id}</td>
+                            <td>${c.razon_social}</td>
+                            <td class="monto-pen">${montoPen > 0 ? 'S/ ' + montoPen.toFixed(2) : '-'}</td>
+                            <td class="monto-usd">${montoUsd > 0 ? '$ ' + montoUsd.toFixed(2) : '-'}</td>
+                            <td><strong>${total.toFixed(2)}</strong></td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                if (sinServicios.length > 0) {
+                    html += `
+                        <div class="card">
+                            <h2>⚠️ Clientes Sin Servicios Activos</h2>
+                            <p>Estos clientes mostrarán "Sin servicios" en el dashboard (es correcto):</p>
+                            <ul>
+                    `;
+                    sinServicios.slice(0, 5).forEach(c => {
+                        html += `<li>${c.razon_social} (ID: ${c.id})</li>`;
+                    });
+                    if (sinServicios.length > 5) {
+                        html += `<li><em>... y ${sinServicios.length - 5} más</em></li>`;
+                    }
+                    html += `
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                html += `
+                    <div class="card">
+                        <h2>🔍 Datos de Ejemplo (Cliente ID: 5)</h2>
+                        <pre>${JSON.stringify(clientes.find(c => c.id === 5) || clientes[0], null, 2)}</pre>
+                    </div>
+                `;
+
+                resultado.innerHTML = html;
+
+            } catch (error) {
+                resultado.innerHTML = `
+                    <div class="card">
+                        <div class="status error">❌ Error de conexión: ${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Cargar automáticamente al abrir la página
+        window.addEventListener('load', cargarDatos);
+    </script>
+</body>
+</html>

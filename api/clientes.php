@@ -1603,21 +1603,21 @@ function getEstadisticasRecordatorios($database) {
         $vencidos = $database->fetch(
             "SELECT COUNT(*) as total
              FROM servicios_contratados
-             WHERE activo = 1 AND fecha_vencimiento < CURDATE()"
+             WHERE estado = 'activo' AND fecha_vencimiento < CURDATE()"
         );
 
         // Contar servicios que vencen hoy
         $venceHoy = $database->fetch(
             "SELECT COUNT(*) as total
              FROM servicios_contratados
-             WHERE activo = 1 AND DATE(fecha_vencimiento) = CURDATE()"
+             WHERE estado = 'activo' AND DATE(fecha_vencimiento) = CURDATE()"
         );
 
         // Contar servicios por vencer (próximos 7 días)
         $porVencer = $database->fetch(
             "SELECT COUNT(*) as total
              FROM servicios_contratados
-             WHERE activo = 1
+             WHERE estado = 'activo'
              AND fecha_vencimiento > CURDATE()
              AND fecha_vencimiento <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)"
         );
