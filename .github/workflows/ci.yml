@@ -176,9 +176,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     if: github.ref == 'refs/heads/master' && github.event_name == 'workflow_dispatch'
-    environment:
-      name: production-migrations
-      url: http://${{ secrets.SERVER_HOST }}:8080
+    environment: production-migrations
 
     steps:
     - uses: actions/checkout@v4
