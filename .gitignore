@@ -9,6 +9,12 @@ test_*.php
 *.bak
 *.swp
 
+# Backups de base de datos (NUNCA subir backups al repo)
+backups/
+backups/auto/
+*.sql
+*.sql.gz
+
 # IDE
 .vscode/
 .idea/

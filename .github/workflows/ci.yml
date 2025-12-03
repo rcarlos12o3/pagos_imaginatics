@@ -141,16 +141,86 @@ jobs:
         ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
           set -e
           cd ${{ secrets.PROJECT_PATH }}
+
+          echo "📦 Pulling latest code..."
           git pull origin master
+
+          echo "🔄 Restarting containers..."
           docker compose down
           docker compose up -d --build
+
+          echo "⏳ Waiting for services..."
           sleep 10
           docker compose ps
+
+          echo "✅ Health check..."
           timeout 60 bash -c 'until curl -f http://localhost:8080; do sleep 2; done' || echo "Warning: Health check timeout"
-          echo "Deployment completed!"
+
+          echo "🎉 Deployment completed!"
+          echo ""
+          echo "⚠️  IMPORTANTE: Las migraciones NO se ejecutan automáticamente"
+          echo "   Para ejecutar migraciones, usa el workflow 'Run Migrations' manualmente"
         EOF
 
     - name: Verify Deployment
       run: |
         curl -f http://${{ secrets.SERVER_HOST }}:8080 || echo "External check failed"
         echo "App available at: http://${{ secrets.SERVER_HOST }}:8080"
+        echo ""
+        echo "⚠️  Si hay migraciones pendientes, ejecuta el workflow 'Run Migrations'"
+
+  # ============================================
+  # JOB DE MIGRACIONES (REQUIERE APROBACIÓN MANUAL)
+  # ============================================
+  migrations:
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.ref == 'refs/heads/master' && github.event_name == 'workflow_dispatch'
+    environment:
+      name: production-migrations
+      url: http://${{ secrets.SERVER_HOST }}:8080
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Run Migrations with Safety Checks
+      run: |
+        ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          set -e
+          cd ${{ secrets.PROJECT_PATH }}
+
+          echo "╔════════════════════════════════════════╗"
+          echo "║  EJECUTANDO MIGRACIONES SEGURAS        ║"
+          echo "╔════════════════════════════════════════╗"
+          echo ""
+
+          # Verificar estado de migraciones
+          echo "📊 Verificando migraciones pendientes..."
+          ./scripts/migrate.sh --status
+          echo ""
+
+          # Ejecutar todas las migraciones pendientes
+          # El script automáticamente:
+          # 1. Valida que no haya comandos peligrosos
+          # 2. Crea backup antes de cada migración
+          # 3. Registra las migraciones aplicadas
+          # 4. Permite rollback en caso de error
+          echo "🚀 Ejecutando migraciones pendientes..."
+          ./scripts/migrate.sh --all || {
+            echo ""
+            echo "❌ ERROR: Migración fallida"
+            echo "📋 El backup está disponible en backups/auto/"
+            echo "🔄 Para hacer rollback: ./scripts/rollback_database.sh"
+            exit 1
+          }
+
+          echo ""
+          echo "✅ Migraciones completadas exitosamente"
+        EOF

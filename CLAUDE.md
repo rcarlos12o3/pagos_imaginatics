@@ -2,14 +2,100 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ IMPORTANTE: Entornos y Seguridad de Datos
+
+### Configuración Multi-Entorno (AUTO-DETECCIÓN)
+
+El sistema **detecta automáticamente** el entorno y configura la base de datos correctamente:
+
+| Entorno | Detección | DB Host | DB User | DB Pass | DEBUG_MODE |
+|---------|-----------|---------|---------|---------|------------|
+| **Local (Desarrollo)** | MySQL en 127.0.0.1 | `127.0.0.1` | `root` | ` ` (vacío) | `true` |
+| **Producción (Docker)** | Hostname 'mysql' existe | `mysql` | `root` | `imaginatics123` | `false` |
+
+**NO requiere cambios manuales** al hacer deploy. El archivo `config/database.php` detecta automáticamente el entorno.
+
+### 🔒 Sistema de Migraciones Seguras
+
+**NUNCA edites la base de datos directamente en producción.** Usa el sistema de migraciones que incluye 5 capas de protección:
+
+```bash
+# LOCAL: Ejecutar migración
+./scripts/migrate.sh migrations/014_mi_migracion.sql
+
+# LOCAL: Ver estado de migraciones
+./scripts/migrate.sh --status
+
+# LOCAL: Ejecutar todas las migraciones pendientes
+./scripts/migrate.sh --all
+
+# PRODUCCIÓN: Solo vía GitHub Actions (workflow manual "Run Migrations")
+# REQUIERE confirmación explícita: escribir "EJECUTAR MIGRACIONES"
+```
+
+### Protecciones del Sistema de Migraciones
+
+1. **Validación Automática**: Bloquea migraciones con comandos peligrosos (DROP TABLE, TRUNCATE, DELETE sin WHERE)
+2. **Backup Automático**: Crea backup completo ANTES de cada migración
+3. **Registro**: Tabla `_migraciones_aplicadas` registra qué migraciones se ejecutaron
+4. **Rollback Fácil**: `./scripts/rollback_database.sh` restaura al último backup
+5. **Aprobación Manual en Producción**: Las migraciones NUNCA se ejecutan automáticamente
+
+### Comandos de Seguridad
+
+```bash
+# Crear backup manual
+./scripts/backup_database.sh
+
+# Validar migración (antes de ejecutarla)
+./scripts/validate_migration.sh migrations/014_mi_migracion.sql
+
+# Hacer rollback al último backup
+./scripts/rollback_database.sh
+
+# Rollback a backup específico
+./scripts/rollback_database.sh /var/www/pagos_imaginatics/backups/auto/backup_20251202_120000.sql.gz
+```
+
+### Comandos PELIGROSOS Bloqueados
+
+El validador detecta y **BLOQUEA** automáticamente:
+- ❌ `DROP TABLE` sin `IF EXISTS`
+- ❌ `TRUNCATE TABLE`
+- ❌ `DELETE FROM` sin `WHERE`
+- ❌ `DROP DATABASE`
+- ⚠️ `UPDATE` sin `WHERE` (advertencia)
+- ⚠️ `DROP COLUMN` (advertencia)
+
+### Flujo de Trabajo Seguro
+
+```bash
+# 1. Desarrollo Local
+cd /Users/pxndx1o2/Herd/pagos_imaginatics
+./scripts/migrate.sh migrations/nueva_migracion.sql
+
+# 2. Commit y Push
+git add migrations/nueva_migracion.sql
+git commit -m "Feat: Nueva migración segura"
+git push origin master
+
+# 3. Deploy Automático (código se despliega, migraciones NO)
+# GitHub Actions ejecuta deploy automáticamente
+
+# 4. Ejecutar Migraciones en Producción (MANUAL)
+# Ve a GitHub → Actions → "Run Database Migrations" → Run workflow
+# Escribe "EJECUTAR MIGRACIONES" para confirmar
+```
+
 ## Descripción del Proyecto
 
 Este es un sistema de consulta RUC basado en PHP para Imaginatics Perú SAC que genera órdenes de pago y las envía vía WhatsApp. El sistema incluye:
 
 - **Frontend**: Página HTML única con JavaScript vanilla
 - **Backend**: APIs PHP con base de datos MySQL
-- **Infraestructura**: Dockerizado con contenedores Apache/PHP y MySQL
+- **Infraestructura**: Auto-detección de entorno (Local/Docker)
 - **Funciones principales**: Consulta RUC, gestión de clientes, generación de órdenes de pago, integración WhatsApp
+- **Seguridad**: Sistema de migraciones con 5 capas de protección
 
 ## Comandos de Desarrollo
 
@@ -26,39 +112,40 @@ docker-compose up -d
 
 ### Operaciones de Base de Datos
 
-**IMPORTANTE**: La aplicación está configurada para usar MySQL local en `127.0.0.1`.
+**IMPORTANTE**: El sistema **auto-detecta** el entorno y se conecta automáticamente a la BD correcta.
 
-**Base de Datos Activa (configurada en config/database.php):**
+**En Local (Desarrollo):**
 ```bash
-# Configuración actual:
-# - Host: 127.0.0.1
-# - Usuario: root
-# - Password: (vacío)
-# - Base de datos: imaginatics_ruc
+# La aplicación se conecta a: 127.0.0.1 (MySQL local)
 
-# Acceder a MySQL local (base de datos activa)
+# Acceder a MySQL local
 mysql -h 127.0.0.1 -u root imaginatics_ruc
 
 # Consultar clientes
 mysql -h 127.0.0.1 -u root -e "USE imaginatics_ruc; SELECT * FROM clientes LIMIT 10;"
 
-# Actualizar registros
-mysql -h 127.0.0.1 -u root -e "USE imaginatics_ruc; UPDATE clientes SET whatsapp='51999999999' WHERE id=1;"
-
-# Hacer backups
-mysqldump -h 127.0.0.1 -u root imaginatics_ruc > backup.sql
+# ⚠️ NO hagas cambios directos. Usa migraciones:
+./scripts/migrate.sh migrations/mi_cambio.sql
 ```
 
-**Contenedores Docker (ambiente alternativo):**
+**En Producción (Docker):**
 ```bash
-# Los contenedores Docker tienen una instancia SEPARADA de MySQL
-# Esta base de datos NO es la que usa la aplicación actualmente
+# La aplicación se conecta a: mysql (contenedor Docker)
 
-# Importar esquema al contenedor Docker
-docker exec -i imaginatics-mysql mysql -u imaginatics -pimaginations123 imaginatics_ruc < database.sql
+# Acceder a MySQL en producción
+docker exec -it imaginatics-mysql mysql -u root -pimaginations123 imaginatics_ruc
 
-# Acceder a MySQL en Docker
-docker exec -it imaginatics-mysql mysql -u imaginatics -pimaginations123 imaginatics_ruc
+# ⚠️ NUNCA hagas cambios directos. Usa GitHub Actions:
+# GitHub → Actions → "Run Database Migrations"
+```
+
+**Backups (Ambos Entornos):**
+```bash
+# Crear backup (detecta entorno automáticamente)
+./scripts/backup_database.sh
+
+# Los backups se guardan en:
+# backups/auto/backup_YYYYMMDD_HHMMSS.sql.gz
 ```
 
 ### Gestión de Contenedores

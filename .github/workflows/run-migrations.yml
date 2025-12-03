@@ -1,0 +1,175 @@
+name: Run Database Migrations
+
+# Este workflow SOLO se ejecuta manualmente
+# NUNCA se ejecuta automáticamente para evitar pérdida de datos
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_migrations:
+        description: 'Escribe "EJECUTAR MIGRACIONES" para confirmar'
+        required: true
+        type: string
+
+jobs:
+  validate-confirmation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm_migrations }}" != "EJECUTAR MIGRACIONES" ]; then
+            echo "❌ Error: Debes escribir exactamente 'EJECUTAR MIGRACIONES' para confirmar"
+            exit 1
+          fi
+          echo "✅ Confirmación válida"
+
+  backup-database:
+    runs-on: ubuntu-latest
+    needs: validate-confirmation
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create Backup
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+            cd ${{ secrets.PROJECT_PATH }}
+
+            echo "╔════════════════════════════════════════╗"
+            echo "║  CREANDO BACKUP DE SEGURIDAD           ║"
+            echo "╔════════════════════════════════════════╗"
+            echo ""
+
+            ./scripts/backup_database.sh || {
+              echo "❌ Error al crear backup"
+              exit 1
+            }
+
+            echo ""
+            echo "✅ Backup creado exitosamente"
+          EOF
+
+  run-migrations:
+    runs-on: ubuntu-latest
+    needs: backup-database
+    environment:
+      name: production-migrations
+      url: http://${{ secrets.SERVER_HOST }}:8080
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Check Migration Status
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+            cd ${{ secrets.PROJECT_PATH }}
+
+            echo "╔════════════════════════════════════════╗"
+            echo "║  ESTADO DE MIGRACIONES                 ║"
+            echo "╔════════════════════════════════════════╗"
+            echo ""
+
+            ./scripts/migrate.sh --status
+          EOF
+
+      - name: Run Migrations with Safety Checks
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+            cd ${{ secrets.PROJECT_PATH }}
+
+            echo ""
+            echo "╔════════════════════════════════════════╗"
+            echo "║  EJECUTANDO MIGRACIONES                ║"
+            echo "╔════════════════════════════════════════╗"
+            echo ""
+
+            # El script migrate.sh automáticamente:
+            # 1. Valida cada migración (bloquea comandos peligrosos)
+            # 2. Crea backup antes de cada migración
+            # 3. Registra migraciones aplicadas
+            # 4. Permite rollback en caso de error
+
+            ./scripts/migrate.sh --all || {
+              echo ""
+              echo "╔════════════════════════════════════════╗"
+              echo "║  ❌ ERROR EN MIGRACIÓN                 ║"
+              echo "╔════════════════════════════════════════╗"
+              echo ""
+              echo "📋 Backup disponible en: backups/auto/"
+              echo ""
+              echo "🔄 Para hacer ROLLBACK:"
+              echo "   ssh al servidor y ejecuta:"
+              echo "   cd ${{ secrets.PROJECT_PATH }}"
+              echo "   ./scripts/rollback_database.sh"
+              echo ""
+              exit 1
+            }
+
+            echo ""
+            echo "╔════════════════════════════════════════╗"
+            echo "║  ✅ MIGRACIONES COMPLETADAS            ║"
+            echo "╔════════════════════════════════════════╗"
+            echo ""
+
+            # Mostrar estado final
+            ./scripts/migrate.sh --status
+          EOF
+
+      - name: Verify Application Health
+        run: |
+          echo "🏥 Verificando salud de la aplicación..."
+          curl -f http://${{ secrets.SERVER_HOST }}:8080 || {
+            echo "❌ La aplicación no responde"
+            echo "⚠️  Considera hacer rollback"
+            exit 1
+          }
+          echo "✅ Aplicación funcionando correctamente"
+
+  notify-success:
+    runs-on: ubuntu-latest
+    needs: run-migrations
+    if: success()
+    steps:
+      - name: Success Notification
+        run: |
+          echo "╔════════════════════════════════════════╗"
+          echo "║  🎉 MIGRACIONES EXITOSAS               ║"
+          echo "╔════════════════════════════════════════╗"
+          echo ""
+          echo "✅ Todas las migraciones se ejecutaron correctamente"
+          echo "✅ La aplicación está funcionando"
+          echo "📊 Backups guardados en backups/auto/"
+          echo ""
+
+  notify-failure:
+    runs-on: ubuntu-latest
+    needs: run-migrations
+    if: failure()
+    steps:
+      - name: Failure Notification
+        run: |
+          echo "╔════════════════════════════════════════╗"
+          echo "║  ❌ MIGRACIONES FALLIDAS               ║"
+          echo "╔════════════════════════════════════════╗"
+          echo ""
+          echo "⚠️  Las migraciones fallaron"
+          echo "📋 Backups disponibles en backups/auto/"
+          echo ""
+          echo "🔄 Para hacer ROLLBACK:"
+          echo "   1. SSH al servidor"
+          echo "   2. cd ${{ secrets.PROJECT_PATH }}"
+          echo "   3. ./scripts/rollback_database.sh"
+          echo ""

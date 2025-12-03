@@ -7,15 +7,45 @@
 // Incluir configuraciones globales
 require_once __DIR__ . '/init.php';
 
-// Configuración de la base de datos
-define('DB_HOST', 'mysql'); // Host de MySQL en Docker
-define('DB_NAME', 'imaginatics_ruc');
-define('DB_USER', 'root');
-define('DB_PASS', 'imaginatics123'); // Contraseña de MySQL en Docker
-define('DB_CHARSET', 'utf8mb4');
+// ============================================
+// AUTO-DETECCIÓN DE ENTORNO
+// ============================================
+/**
+ * Detecta automáticamente si está en Docker o local
+ * NO requiere cambios manuales al hacer deploy
+ */
+function detectar_entorno() {
+    // Verificar si existe el hostname 'mysql' (contenedor Docker)
+    $esta_en_docker = @gethostbyname('mysql') !== 'mysql';
 
-// Configuración de errores
-define('DEBUG_MODE', true); // Cambiar a false en producción
+    // También verificar si existe /.dockerenv
+    $docker_file = file_exists('/.dockerenv');
+
+    return $esta_en_docker || $docker_file;
+}
+
+$ES_DOCKER = detectar_entorno();
+
+// Configuración de la base de datos según entorno
+if ($ES_DOCKER) {
+    // ═══ PRODUCCIÓN (Docker) ═══
+    define('DB_HOST', 'mysql');
+    define('DB_USER', 'root');
+    define('DB_PASS', 'imaginatics123');
+    define('DEBUG_MODE', false);  // Seguridad en producción
+    define('ENVIRONMENT', 'production');
+} else {
+    // ═══ LOCAL (Desarrollo) ═══
+    define('DB_HOST', '127.0.0.1');
+    define('DB_USER', 'root');
+    define('DB_PASS', '');
+    define('DEBUG_MODE', true);
+    define('ENVIRONMENT', 'local');
+}
+
+// Constantes comunes
+define('DB_NAME', 'imaginatics_ruc');
+define('DB_CHARSET', 'utf8mb4');
 
 // Configuración de CORS para permitir requests desde el frontend
 header('Access-Control-Allow-Origin: *');

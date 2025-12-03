@@ -17,12 +17,37 @@ define('TIMEOUT_PROCESAMIENTO', 7200); // 2 horas máximo
 // Para ejecución CLI
 $esCLI = php_sapi_name() === 'cli';
 
+// ============================================
+// PROTECCIÓN 1: FILE LOCK
+// ============================================
+// Previene múltiples instancias simultáneas del script
+$lockFile = fopen('/tmp/procesar_cola_imaginatics.lock', 'c');
+if (!flock($lockFile, LOCK_EX | LOCK_NB)) {
+    // Ya hay otra instancia corriendo
+    if ($esCLI) {
+        echo "[" . date('Y-m-d H:i:s') . "] ⏸️  Otra instancia ya está procesando la cola. Saliendo." . PHP_EOL;
+    }
+    exit(0);
+}
+
+// Registrar PID de esta instancia
+fwrite($lockFile, getmypid() . " - " . date('Y-m-d H:i:s'));
+fflush($lockFile);
+
+// Asegurar que el lock se libere al terminar
+register_shutdown_function(function() use ($lockFile) {
+    if ($lockFile) {
+        flock($lockFile, LOCK_UN);
+        fclose($lockFile);
+    }
+});
+
 // Instanciar base de datos
 $database = new Database();
 $db = $database->connect();
 
 // Log de inicio
-$database->log('info', 'cola_procesador', 'Iniciando procesamiento de cola');
+$database->log('info', 'cola_procesador', 'Iniciando procesamiento de cola [PID: ' . getmypid() . ']');
 
 try {
     // Buscar sesiones pendientes o con trabajos sin terminar
@@ -56,15 +81,21 @@ try {
             ", [$sesion['id']]);
         }
 
-        // Obtener trabajos pendientes de esta sesión
+        // ============================================
+        // PROTECCIÓN 2: DB LOCK con FOR UPDATE SKIP LOCKED
+        // ============================================
+        // Obtiene trabajos pendientes y los LOCKEA para esta instancia
+        // SKIP LOCKED = Si otra instancia ya los tiene, los salta
+        // Nota: Solo procesar 'pendiente', NO 'error' (evita race condition)
         $trabajos = $database->fetchAll("
             SELECT * FROM cola_envios
             WHERE sesion_id = ?
-            AND estado IN ('pendiente', 'error')
+            AND estado = 'pendiente'
             AND intentos < max_intentos
             AND (fecha_programada IS NULL OR fecha_programada <= NOW())
             ORDER BY prioridad DESC, fecha_creacion ASC
             LIMIT ?
+            FOR UPDATE SKIP LOCKED
         ", [$sesion['id'], MAX_TRABAJOS_POR_EJECUCION]);
 
         if (empty($trabajos)) {
@@ -90,14 +121,25 @@ try {
                 $num_trabajo = $index + 1;
                 log_mensaje("  [{$num_trabajo}/{$total_trabajos}] Procesando: {$trabajo['razon_social']}");
 
-                // Marcar como procesando
-                $database->query("
+                // ============================================
+                // PROTECCIÓN 3: UPDATE ATÓMICO
+                // ============================================
+                // Marca como procesando SOLO si el estado sigue siendo 'pendiente'
+                // Si otra instancia ya lo procesó, este UPDATE no afecta ninguna fila
+                $filasActualizadas = $database->rowCount("
                     UPDATE cola_envios
                     SET estado = 'procesando',
                         fecha_procesamiento = NOW(),
                         intentos = intentos + 1
                     WHERE id = ?
+                    AND estado = 'pendiente'
                 ", [$trabajo['id']]);
+
+                // Si no se actualizó ninguna fila, otra instancia ya lo procesó
+                if ($filasActualizadas === 0) {
+                    log_mensaje("    ⏭️  Ya procesado por otra instancia, saltando...");
+                    continue;
+                }
 
                 // Procesar el envío
                 $resultado = procesarEnvio($trabajo, $database);
