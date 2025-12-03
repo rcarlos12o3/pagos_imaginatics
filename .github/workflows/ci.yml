@@ -143,7 +143,9 @@ jobs:
           cd ${{ secrets.PROJECT_PATH }}
 
           echo "📦 Pulling latest code..."
-          git pull origin master
+          git fetch origin
+          git reset --hard origin/master
+          git clean -fd
 
           echo "🔄 Restarting containers..."
           docker compose down
